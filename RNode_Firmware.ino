@@ -16,6 +16,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include "Utilities.h"
+#include "BLE_RNode.h"
 
 FIFOBuffer serialFIFO;
 uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
@@ -131,7 +132,8 @@ void setup() {
     #endif
 
     #if HAS_BLUETOOTH
-      bt_init();
+      //bt_init();
+      ble_init();
       bt_init_ran = true;
     #endif
 

@@ -131,6 +131,8 @@
 		// firmware, you can manually define model here.
 		//
 		// #define BOARD_MODEL BOARD_GENERIC_ESP32
+    //#define BOARD_MODEL BOARD_LORA32_V2_0
+    #define BOARD_MODEL BOARD_LORA32_V1_0
 
 		#if BOARD_MODEL == BOARD_GENERIC_ESP32
 			const int pin_cs = 4;
