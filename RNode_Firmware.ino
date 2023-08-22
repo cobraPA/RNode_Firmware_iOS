@@ -16,7 +16,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include "Utilities.h"
-#include "BLE_RNode.h"
+// added to Utilities
+//#include "BLE_RNode.h"
 
 FIFOBuffer serialFIFO;
 uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
@@ -1084,7 +1085,9 @@ void buffer_serial() {
     #if HAS_BLUETOOTH
     while (
       c < MAX_CYCLES &&
-      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) )
+      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) 
+      || (bt_state == BT_STATE_BLE_CONNECTED && BLE_data_available())
+      )
       )
     #else
     while (c < MAX_CYCLES && Serial.available())
@@ -1101,6 +1104,10 @@ void buffer_serial() {
           if (!fifo_isfull(&serialFIFO)) {
             fifo_push(&serialFIFO, SerialBT.read());
           }
+        } else if (HAS_BLUETOOTH && bt_state == BT_STATE_BLE_CONNECTED) {
+          if (!fifo_isfull(&serialFIFO)) {
+            fifo_push(&serialFIFO, BLERead());
+          }        
         } else {
           if (!fifo_isfull(&serialFIFO)) {
             fifo_push(&serialFIFO, Serial.read());

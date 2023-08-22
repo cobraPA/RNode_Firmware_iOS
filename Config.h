@@ -52,6 +52,7 @@
 	#define BT_STATE_ON        0x01
 	#define BT_STATE_PAIRING   0x02
 	#define BT_STATE_CONNECTED 0x03
+  #define BT_STATE_BLE_CONNECTED 0x04
 	uint8_t bt_state = BT_STATE_NA;
 	uint32_t bt_ssp_pin = 0;
 	bool bt_ready = false;
@@ -87,6 +88,7 @@
 
     #define HAS_DISPLAY false
     #define HAS_BLUETOOTH false
+    #define HAS_BLE false
     #define HAS_TCXO false
     #define HAS_PMU false
     #define HAS_NP false
@@ -176,6 +178,7 @@
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
+            #define HAS_BLE true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_0
 			const int pin_cs = 18;
 			const int pin_reset = 12;

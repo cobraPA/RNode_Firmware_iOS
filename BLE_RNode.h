@@ -7,13 +7,37 @@
 From
 
 */
+
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+// commented usage of 2902 for now...
+//#include <BLE2902.h>
 
+/*
+Uses BLE only implementation, use full stack if 
+we continue supporting Classic Bluetooth for Android
+#include <NimBLEDevice.h>
+*/
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+/*
+Some setup based on BLE 'UART' model from here
+https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLETests/Arduino/BLE_uart/BLE_uart.ino
+*/
+
+//#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331d00d"
+//#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define CHARACTERISTIC_UUID_RX "beb5483e-36e1-4688-b7f5-ea07361bd01d"
+#define CHARACTERISTIC_UUID_TX "beb5483e-36e1-4688-b7f5-ea07361bd02d"
+
+/*
+ * Optionally, the defined UART UUIDs from Nordic.  This is expected to
+ * be a BLE to UART (serial) bridge.
+#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
+#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+ */
 
 #define BT_DEV_ADDR_LEN 6
 #define BT_DEV_HASH_LEN 16
@@ -21,10 +45,73 @@ From
 //char bt_dh[BT_DEV_HASH_LEN];
 //char bt_devname[11];
 
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
+
+BLECharacteristic *pCharacteristicTx;
+
+FIFOBuffer BLE_FIFO;
+uint8_t BLE_Buffer[CONFIG_UART_BUFFER_SIZE+1];
+
+
+//----------------------------
+
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+
+      Serial.println("Connect..");
+
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+      Serial.println("Disconnect..");
+      delay(500);
+      pServer->startAdvertising(); // restart advertising
+    }
+};
+
+class MyCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string rxValue = pCharacteristic->getValue();
+
+      for (int i = 0; i < rxValue.length(); i++)
+          if (!fifo_isfull(&BLE_FIFO)) {
+            fifo_push(&BLE_FIFO, rxValue[i] );
+          }
+
+        Serial.print("RX: ");
+        for (int i = 0; i < rxValue.length(); i++)
+          Serial.print(rxValue[i]);
+
+        Serial.println();
+
+  /*
+      if (rxValue.length() > 0) {
+        Serial.println("*********");
+        Serial.print("Received Value: ");
+        for (int i = 0; i < rxValue.length(); i++)
+          Serial.print(rxValue[i]);
+
+        Serial.println();
+        Serial.println("*********");
+      }
+      */
+
+    }
+};
+
+
+
 bool ble_init() {
   //Serial.begin(115200);
   //Serial.println("Starting BLE work!");
   static char bt_devname[15];
+
+  // Initialise serial communication
+  memset(BLE_Buffer, 0, sizeof(BLE_Buffer));
+  fifo_init(&BLE_FIFO, BLE_Buffer, CONFIG_UART_BUFFER_SIZE);
 
   BLEDevice::init("RNode");
   //BLEDevice::init(bt_devname);
@@ -57,16 +144,39 @@ bool ble_init() {
   /*
    * Here we have implemented simplest security. This kind security does not provide authentication
    */
+  // Remove for NimBLE
   BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+
   BLEServer *pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
   BLEService *pService = pServer->createService(SERVICE_UUID);
-  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-                                         CHARACTERISTIC_UUID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE
+
+  BLECharacteristic *pCharacteristicRx = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID_RX,
+                                         BLECharacteristic::PROPERTY_WRITE 
+                                         /* BLECharacteristic::PROPERTY_WRITE */
+                                         /* NimBLE
+                                         NIMBLE_PROPERTY::READ |
+                                         NIMBLE_PROPERTY::READ_ENC |
+                                         NIMBLE_PROPERTY::WRITE |
+                                         NIMBLE_PROPERTY::WRITE_ENC */
                                        );
 
-  pCharacteristic->setValue("Hello World says Neil");
+  pCharacteristicRx->setCallbacks(new MyCallbacks());
+
+  //BLECharacteristic *pCharacteristicTx
+  pCharacteristicTx = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID_TX,
+                                         /*BLECharacteristic::PROPERTY_WRITE  | */
+                                         BLECharacteristic::PROPERTY_NOTIFY
+                                       );
+  // Not required?  Used in BLE UART sample
+  //pCharacteristicTx->addDescriptor(new BLE2902());
+
+  // sample write
+  //pCharacteristicTx->setValue("Hello World says Neil");
+
   pService->start();
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->start();
@@ -74,4 +184,47 @@ bool ble_init() {
 
 
   return true;
+}
+
+void BLEWrite(uint8_t byte) {
+  char val[2];
+  val[0] = byte;
+  val[1] = 0;
+  //std::string send( (char) byte);
+  pCharacteristicTx->setValue(val);
+}
+
+uint8_t BLERead( void ) {
+  uint8_t data = 0;
+
+  #if MCU_VARIANT == MCU_ESP32
+      //buffer_serial();
+      if (!fifo_isempty(&BLE_FIFO)) {
+        char sbyte = fifo_pop(&BLE_FIFO);
+        data = sbyte;
+      }
+  #else
+    if (!fifo_isempty_locked(&BLE_FIFO)) {
+      char sbyte = fifo_pop(&BLE_FIFO);
+      data = sbyte;
+    }
+  #endif
+
+  return data;
+}
+
+bool BLE_data_available( void ) {
+  bool stat = false;
+
+  #if MCU_VARIANT == MCU_ESP32
+      if (!fifo_isempty(&BLE_FIFO)) {
+        stat = true;
+      }
+  #else
+    if (!fifo_isempty_locked(&BLE_FIFO)) {
+        stat = true;
+    }
+  #endif
+
+  return stat;
 }
