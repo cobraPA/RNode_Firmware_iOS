@@ -14,11 +14,14 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.61`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.68`. This release brings the following changes:
 
-- Fixed a bug that caused display initialisation to fail on some boards
+- Fixed a bug in high-bandwidth optimisation
+- Fixed a potential memory overflow during firmware update
+- Fixed a bug in LoRa modem status updates
+- Updated bootstrap console with latest packages
 
-You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.61`. Get it by updating the `rns` package to at least version `0.5.2`.
+You must have at least version `2.1.3` of `rnodeconf` installed to update the RNode Firmware to version `1.67`. Get it by updating the `rns` package to at least version `0.6.4`.
 
 ## A Self-Replicating System
 
@@ -38,7 +41,7 @@ This tree fits into the larger biome of Free & Open Communications Systems, whic
 
 The RNode design is meant to flexible and hackable. At it's core, it is a low-power, but extremely long-range digital radio transceiver. Coupled with Reticulum, it provides encrypted and secure communications.
 
-Depeding on configuration, it can be used for local networking purposes, or to send data over very long distances. Once you have an RNode, there is a wide variety of possible uses:
+Depending on configuration, it can be used for local networking purposes, or to send data over very long distances. Once you have an RNode, there is a wide variety of possible uses:
 
 - As a network adapter for [Reticulum](https://reticulum.network)
 - Messaging using [Sideband](https://unsigned.io/software/Sideband.html)
@@ -58,6 +61,10 @@ The RNode system has been designed to allow reliable systems for basic human com
 While **speeds are lower** than WiFi, typical communication **ranges are many times higher**. Several kilometers can be acheived with usable bitrates, even in urban areas, and over **100 kilometers** can be achieved in line-of-sight conditions.
 
 ## Supported Boards & Devices
+It's easy to create your own RNodes from one of the supported development boards and devices. If a device or board you want to use is not yet supported, you are welcome to join the effort and help creating a board definition and pin mapping for it!
+
+<img src="Documentation/images/devboards_1.webp" width="100%"/>
+
 The RNode Firmware supports the following boards:
 
 - Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)

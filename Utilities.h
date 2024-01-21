@@ -223,6 +223,13 @@ void led_indicate_error(int cycles) {
 	#endif
 }
 
+// LED Indication: Airtime Lock
+void led_indicate_airtime_lock() {
+	#if HAS_NP == true
+		npset(32,0,2);
+	#endif
+}
+
 // LED Indication: Boot Error
 void led_indicate_boot_error() {
 	#if HAS_NP == true
@@ -712,6 +719,77 @@ void kiss_indicate_frequency() {
 	serial_write(FEND);
 }
 
+void kiss_indicate_st_alock() {
+	uint16_t at = (uint16_t)(st_airtime_limit*100*100);
+	serial_write(FEND);
+	serial_write(CMD_ST_ALOCK);
+	escaped_serial_write(at>>8);
+	escaped_serial_write(at);
+	serial_write(FEND);
+}
+
+void kiss_indicate_lt_alock() {
+	uint16_t at = (uint16_t)(lt_airtime_limit*100*100);
+	serial_write(FEND);
+	serial_write(CMD_LT_ALOCK);
+	escaped_serial_write(at>>8);
+	escaped_serial_write(at);
+	serial_write(FEND);
+}
+
+void kiss_indicate_channel_stats() {
+	#if MCU_VARIANT == MCU_ESP32
+		uint16_t ats = (uint16_t)(airtime*100*100);
+		uint16_t atl = (uint16_t)(longterm_airtime*100*100);
+		uint16_t cls = (uint16_t)(total_channel_util*100*100);
+		uint16_t cll = (uint16_t)(longterm_channel_util*100*100);
+		serial_write(FEND);
+		serial_write(CMD_STAT_CHTM);
+		escaped_serial_write(ats>>8);
+		escaped_serial_write(ats);
+		escaped_serial_write(atl>>8);
+		escaped_serial_write(atl);
+		escaped_serial_write(cls>>8);
+		escaped_serial_write(cls);
+		escaped_serial_write(cll>>8);
+		escaped_serial_write(cll);
+		serial_write(FEND);
+	#endif
+}
+
+void kiss_indicate_phy_stats() {
+	#if MCU_VARIANT == MCU_ESP32
+		uint16_t lst = (uint16_t)(lora_symbol_time_ms*1000);
+		uint16_t lsr = (uint16_t)(lora_symbol_rate);
+		uint16_t prs = (uint16_t)(lora_preamble_symbols+4);
+		uint16_t prt = (uint16_t)((lora_preamble_symbols+4)*lora_symbol_time_ms);
+		uint16_t cst = (uint16_t)(csma_slot_ms);
+		serial_write(FEND);
+		serial_write(CMD_STAT_PHYPRM);
+		escaped_serial_write(lst>>8);
+		escaped_serial_write(lst);
+		escaped_serial_write(lsr>>8);
+		escaped_serial_write(lsr);
+		escaped_serial_write(prs>>8);
+		escaped_serial_write(prs);
+		escaped_serial_write(prt>>8);
+		escaped_serial_write(prt);
+		escaped_serial_write(cst>>8);
+		escaped_serial_write(cst);
+		serial_write(FEND);
+	#endif
+}
+
+void kiss_indicate_battery() {
+	#if MCU_VARIANT == MCU_ESP32
+		serial_write(FEND);
+		serial_write(CMD_STAT_BAT);
+		escaped_serial_write(battery_state);
+		escaped_serial_write((uint8_t)int(battery_percent));
+		serial_write(FEND);
+	#endif
+}
+
 void kiss_indicate_btpin() {
 	#if HAS_BLUETOOTH
 		serial_write(FEND);
@@ -885,12 +963,41 @@ inline uint8_t packetSequence(uint8_t header) {
 	return header >> 4;
 }
 
+void setPreamble() {
+	if (radio_online) LoRa.setPreambleLength(lora_preamble_symbols);
+	kiss_indicate_phy_stats();
+}
+
+void updateBitrate() {
+	#if MCU_VARIANT == MCU_ESP32
+		if (radio_online) {
+			lora_symbol_rate = (float)lora_bw/(float)(pow(2, lora_sf));
+			lora_symbol_time_ms = (1.0/lora_symbol_rate)*1000.0;
+			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
+			lora_us_per_byte = 1000000.0/((float)lora_bitrate/8.0);
+			// csma_slot_ms = lora_symbol_time_ms*10;
+			float target_preamble_symbols = (LORA_PREAMBLE_TARGET_MS/lora_symbol_time_ms)-LORA_PREAMBLE_SYMBOLS_HW;
+			if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) {
+				target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN;
+			} else {
+				target_preamble_symbols = ceil(target_preamble_symbols);
+			}
+			lora_preamble_symbols = (long)target_preamble_symbols;
+			setPreamble();
+		} else {
+			lora_bitrate = 0;
+		}
+	#endif
+}
+
 void setSpreadingFactor() {
 	if (radio_online) LoRa.setSpreadingFactor(lora_sf);
+	updateBitrate();
 }
 
 void setCodingRate() {
 	if (radio_online) LoRa.setCodingRate4(lora_cr);
+	updateBitrate();
 }
 
 void set_implicit_length(uint8_t len) {
@@ -937,6 +1044,7 @@ void getBandwidth() {
 	if (radio_online) {
 			lora_bw = LoRa.getSignalBandwidth();
 	}
+	updateBitrate();
 }
 
 void setBandwidth() {
@@ -1139,6 +1247,10 @@ void di_conf_save(uint8_t dint) {
 	eeprom_update(eeprom_addr(ADDR_CONF_DINT), dint);
 }
 
+void da_conf_save(uint8_t dadr) {
+	eeprom_update(eeprom_addr(ADDR_CONF_DADR), dadr);
+}
+
 bool eeprom_have_conf() {
 	if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
 		return true;
@@ -1187,5 +1299,183 @@ void eeprom_conf_delete() {
 void unlock_rom() {
 	led_indicate_error(50);
 	eeprom_erase();
+}
+
+void init_channel_stats() {
+	#if MCU_VARIANT == MCU_ESP32
+		for (uint16_t ai = 0; ai < DCD_SAMPLES; ai++) { util_samples[ai] = false; }
+		for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { airtime_bins[ai] = 0; }
+		for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { longterm_bins[ai] = 0.0; }
+		local_channel_util = 0.0;
+		total_channel_util = 0.0;
+		airtime = 0.0;
+		longterm_airtime = 0.0;
+	#endif
+}
+
+typedef struct FIFOBuffer
+{
+  unsigned char *begin;
+  unsigned char *end;
+  unsigned char * volatile head;
+  unsigned char * volatile tail;
+} FIFOBuffer;
+
+inline bool fifo_isempty(const FIFOBuffer *f) {
+  return f->head == f->tail;
+}
+
+inline bool fifo_isfull(const FIFOBuffer *f) {
+  return ((f->head == f->begin) && (f->tail == f->end)) || (f->tail == f->head - 1);
+}
+
+inline void fifo_push(FIFOBuffer *f, unsigned char c) {
+  *(f->tail) = c;
+  
+  if (f->tail == f->end) {
+    f->tail = f->begin;
+  } else {
+    f->tail++;
+  }
+}
+
+inline unsigned char fifo_pop(FIFOBuffer *f) {
+  if(f->head == f->end) {
+    f->head = f->begin;
+    return *(f->end);
+  } else {
+    return *(f->head++);
+  }
+}
+
+inline void fifo_flush(FIFOBuffer *f) {
+  f->head = f->tail;
+}
+
+#if MCU_VARIANT != MCU_ESP32
+	static inline bool fifo_isempty_locked(const FIFOBuffer *f) {
+	  bool result;
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    result = fifo_isempty(f);
+	  }
+	  return result;
+	}
+
+	static inline bool fifo_isfull_locked(const FIFOBuffer *f) {
+	  bool result;
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    result = fifo_isfull(f);
+	  }
+	  return result;
+	}
+
+	static inline void fifo_push_locked(FIFOBuffer *f, unsigned char c) {
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    fifo_push(f, c);
+	  }
+	}
+#endif
+
+/*
+static inline unsigned char fifo_pop_locked(FIFOBuffer *f) {
+  unsigned char c;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    c = fifo_pop(f);
+  }
+  return c;
+}
+*/
+
+inline void fifo_init(FIFOBuffer *f, unsigned char *buffer, size_t size) {
+  f->head = f->tail = f->begin = buffer;
+  f->end = buffer + size;
+}
+
+inline size_t fifo_len(FIFOBuffer *f) {
+  return f->end - f->begin;
+}
+
+typedef struct FIFOBuffer16
+{
+  uint16_t *begin;
+  uint16_t *end;
+  uint16_t * volatile head;
+  uint16_t * volatile tail;
+} FIFOBuffer16;
+
+inline bool fifo16_isempty(const FIFOBuffer16 *f) {
+  return f->head == f->tail;
+}
+
+inline bool fifo16_isfull(const FIFOBuffer16 *f) {
+  return ((f->head == f->begin) && (f->tail == f->end)) || (f->tail == f->head - 1);
+}
+
+inline void fifo16_push(FIFOBuffer16 *f, uint16_t c) {
+  *(f->tail) = c;
+
+  if (f->tail == f->end) {
+    f->tail = f->begin;
+  } else {
+    f->tail++;
+  }
+}
+
+inline uint16_t fifo16_pop(FIFOBuffer16 *f) {
+  if(f->head == f->end) {
+    f->head = f->begin;
+    return *(f->end);
+  } else {
+    return *(f->head++);
+  }
+}
+
+inline void fifo16_flush(FIFOBuffer16 *f) {
+  f->head = f->tail;
+}
+
+#if MCU_VARIANT != MCU_ESP32
+	static inline bool fifo16_isempty_locked(const FIFOBuffer16 *f) {
+	  bool result;
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    result = fifo16_isempty(f);
+	  }
+
+	  return result;
+	}
+#endif
+
+/*
+static inline bool fifo16_isfull_locked(const FIFOBuffer16 *f) {
+  bool result;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    result = fifo16_isfull(f);
+  }
+  return result;
+}
+
+
+static inline void fifo16_push_locked(FIFOBuffer16 *f, uint16_t c) {
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    fifo16_push(f, c);
+  }
+}
+
+static inline size_t fifo16_pop_locked(FIFOBuffer16 *f) {
+  size_t c;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    c = fifo16_pop(f);
+  }
+  return c;
+}
+*/
+
+inline void fifo16_init(FIFOBuffer16 *f, uint16_t *buffer, uint16_t size) {
+  f->head = f->tail = f->begin = buffer;
+  f->end = buffer + size;
+}
+
+inline uint16_t fifo16_len(FIFOBuffer16 *f) {
+  return (f->end - f->begin);
 }
 

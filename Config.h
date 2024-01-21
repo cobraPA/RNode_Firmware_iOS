@@ -19,10 +19,10 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x3E
+	#define MIN_VERS  0x45
 
 	#define PLATFORM_AVR   0x90
-    #define PLATFORM_ESP32 0x80
+  #define PLATFORM_ESP32 0x80
 
 	#define MCU_1284P 0x91
 	#define MCU_2560  0x92
@@ -309,27 +309,43 @@
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
-	const int lora_rx_turnaround_ms = 50;
 
 	// SX1276 RSSI offset to get dBm value from
 	// packet RSSI register
 	const int  rssi_offset = 157;
 
 	// Default LoRa settings
-	int  lora_sf   	   = 0;
-	int  lora_cr       = 5;
-	int  lora_txp      = 0xFF;
-	uint32_t lora_bw   = 0;
-	uint32_t lora_freq = 0;
+	const int lora_rx_turnaround_ms = 66;
+	const int lora_post_tx_yield_slots = 6;
+	uint32_t post_tx_yield_timeout = 0;
+	#define LORA_PREAMBLE_SYMBOLS_HW  4
+	#define LORA_PREAMBLE_SYMBOLS_MIN 18
+	#define LORA_PREAMBLE_TARGET_MS   15
+	#define LORA_CAD_SYMBOLS 3
+	int csma_slot_ms = 50;
+	float csma_p_min = 0.1;
+	float csma_p_max = 0.8;
+	uint8_t csma_p = 0;
+
+	int  lora_sf   	           = 0;
+	int  lora_cr               = 5;
+	int  lora_txp              = 0xFF;
+	uint32_t lora_bw           = 0;
+	uint32_t lora_freq         = 0;
+	uint32_t lora_bitrate      = 0;
+	long lora_preamble_symbols = 6;
+	float lora_symbol_time_ms  = 0.0;
+	float lora_symbol_rate     = 0.0;
+	float lora_us_per_byte     = 0.0;
 
 	// Operational variables
 	bool radio_locked  = true;
 	bool radio_online  = false;
-    bool community_fw  = true;
+	bool community_fw  = true;
 	bool hw_ready      = false;
-    bool radio_error   = false;
-    bool disp_ready    = false;
-    bool pmu_ready     = false;
+	bool radio_error   = false;
+	bool disp_ready    = false;
+	bool pmu_ready     = false;
 	bool promisc       = false;
 	bool implicit      = false;
 	uint8_t implicit_l = 0;
@@ -357,17 +373,43 @@
 	uint32_t stat_rx		= 0;
 	uint32_t stat_tx		= 0;
 
-	bool stat_signal_detected = false;
-	bool stat_signal_synced   = false;
-	bool stat_rx_ongoing      = false;
-	bool dcd				  = false;
-	bool dcd_led              = false;
-	bool dcd_waiting          = false;
-	uint16_t dcd_count        = 0;
-	uint16_t dcd_threshold    = 15;
+	#define STATUS_INTERVAL_MS 3
+	#if MCU_VARIANT == MCU_ESP32
+	  #define DCD_SAMPLES 2500
+		#define UTIL_UPDATE_INTERVAL_MS 1000
+		#define UTIL_UPDATE_INTERVAL (UTIL_UPDATE_INTERVAL_MS/STATUS_INTERVAL_MS)
+		#define AIRTIME_LONGTERM 3600
+		#define AIRTIME_LONGTERM_MS (AIRTIME_LONGTERM*1000)
+		#define AIRTIME_BINLEN_MS (STATUS_INTERVAL_MS*DCD_SAMPLES)
+		#define AIRTIME_BINS ((AIRTIME_LONGTERM*1000)/AIRTIME_BINLEN_MS)
+		bool util_samples[DCD_SAMPLES];
+		uint16_t airtime_bins[AIRTIME_BINS];
+		float longterm_bins[AIRTIME_BINS];
+		int dcd_sample = 0;
+		float local_channel_util = 0.0;
+		float total_channel_util = 0.0;
+		float longterm_channel_util = 0.0;
+		float airtime = 0.0;
+		float longterm_airtime = 0.0;
+		#define current_airtime_bin(void) (millis()%AIRTIME_LONGTERM_MS)/AIRTIME_BINLEN_MS
+	#endif
+	float st_airtime_limit = 0.0;
+	float lt_airtime_limit = 0.0;
+	bool airtime_lock = false;
 
-	uint32_t status_interval_ms = 3;
+	bool stat_signal_detected   = false;
+	bool stat_signal_synced     = false;
+	bool stat_rx_ongoing        = false;
+	bool dcd                    = false;
+	bool dcd_led                = false;
+	bool dcd_waiting            = false;
+	long dcd_wait_until         = 0;
+	uint16_t dcd_count          = 0;
+	uint16_t dcd_threshold      = 2;
+
+	uint32_t status_interval_ms = STATUS_INTERVAL_MS;
 	uint32_t last_status_update = 0;
+	uint32_t last_dcd = 0;
 
 	// Status flags
 	const uint8_t SIG_DETECT = 0x01;
@@ -386,6 +428,8 @@
     float battery_percent = 0.0;
     uint8_t battery_state = 0x00;
     uint8_t display_intensity = 0xFF;
+    uint8_t display_addr = 0xFF;
+    bool display_diagnostics = true;    
     bool device_init_done = false;
     bool eeprom_ok = false;
     bool firmware_update_mode = false;

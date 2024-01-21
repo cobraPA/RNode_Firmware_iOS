@@ -17,6 +17,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "Fonts/Org_01.h"
 #define DISP_W 128
 #define DISP_H 64
 #if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0
@@ -24,17 +25,23 @@
   #define DISP_ADDR 0x3C
 #elif BOARD_MODEL == BOARD_TBEAM
   #define DISP_RST 13
-  #define DISP_ADDR 0x3D
-  // #define DISP_ADDR 0x3C
+  #define DISP_ADDR 0x3C
+  #define DISP_CUSTOM_ADDR true
 #elif BOARD_MODEL == BOARD_HELTEC32_V2 || BOARD_MODEL == BOARD_LORA32_V1_0
   #define DISP_RST 16
   #define DISP_ADDR 0x3C
   #define SCL_OLED 15
   #define SDA_OLED 4
+#elif BOARD_MODEL == BOARD_RNODE_NG_21
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3C
 #else
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
+  #define DISP_CUSTOM_ADDR true
 #endif
+
+#define SMALL_FONT &Org_01
 
 Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 
@@ -101,8 +108,16 @@ bool display_init() {
       digitalWrite(pin_display_en, HIGH);
       Wire.begin(SDA_OLED, SCL_OLED);
     #endif
+
+    #if DISP_CUSTOM_ADDR == true
+      uint8_t display_address = EEPROM.read(eeprom_addr(ADDR_CONF_DADR));
+      if (display_address == 0xFF) display_address = DISP_ADDR;
+    #else
+      uint8_t display_address = DISP_ADDR;
+    #endif
+
     
-    if(!display.begin(SSD1306_SWITCHCAPVCC, DISP_ADDR)) {
+    if(!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
       return false;
     } else {
       set_contrast(&display, display_contrast);
@@ -235,29 +250,32 @@ void draw_battery_bars(int px, int py) {
   }
 }
 
-#define Q_SNR_MIN -10.0
-#define Q_SNR_MAX 8.0
-#define Q_SNR_SPAN (Q_SNR_MAX-Q_SNR_MIN)
+#define Q_SNR_STEP 2.0
+#define Q_SNR_MIN_BASE -9.0
+#define Q_SNR_MAX 6.0
 void draw_quality_bars(int px, int py) {
   signed char t_snr = (signed int)last_snr_raw;
   int snr_int = (int)t_snr;
+  float snr_min = Q_SNR_MIN_BASE-(int)lora_sf*Q_SNR_STEP;
+  float snr_span = (Q_SNR_MAX-snr_min);
   float snr = ((int)snr_int) * 0.25;
-  float quality = ((snr-Q_SNR_MIN)/(Q_SNR_SPAN))*100;
+  float quality = ((snr-snr_min)/(snr_span))*100;
   if (quality > 100.0) quality = 100.0;
+  if (quality < 0.0) quality = 0.0;
 
   stat_area.fillRect(px, py, 13, 7, SSD1306_BLACK);
   // Serial.printf("Last SNR: %.2f\n, quality: %.2f\n", snr, quality);
-  if (quality > 7)  stat_area.drawLine(px+0*2, py+7, px+0*2, py+6, SSD1306_WHITE);
-  if (quality > 20) stat_area.drawLine(px+1*2, py+7, px+1*2, py+5, SSD1306_WHITE);
-  if (quality > 33) stat_area.drawLine(px+2*2, py+7, px+2*2, py+4, SSD1306_WHITE);
-  if (quality > 46) stat_area.drawLine(px+3*2, py+7, px+3*2, py+3, SSD1306_WHITE);
-  if (quality > 59) stat_area.drawLine(px+4*2, py+7, px+4*2, py+2, SSD1306_WHITE);
-  if (quality > 72) stat_area.drawLine(px+5*2, py+7, px+5*2, py+1, SSD1306_WHITE);
-  if (quality > 85) stat_area.drawLine(px+6*2, py+7, px+6*2, py+0, SSD1306_WHITE);
+  if (quality > 0)  stat_area.drawLine(px+0*2, py+7, px+0*2, py+6, SSD1306_WHITE);
+  if (quality > 15) stat_area.drawLine(px+1*2, py+7, px+1*2, py+5, SSD1306_WHITE);
+  if (quality > 30) stat_area.drawLine(px+2*2, py+7, px+2*2, py+4, SSD1306_WHITE);
+  if (quality > 45) stat_area.drawLine(px+3*2, py+7, px+3*2, py+3, SSD1306_WHITE);
+  if (quality > 60) stat_area.drawLine(px+4*2, py+7, px+4*2, py+2, SSD1306_WHITE);
+  if (quality > 75) stat_area.drawLine(px+5*2, py+7, px+5*2, py+1, SSD1306_WHITE);
+  if (quality > 90) stat_area.drawLine(px+6*2, py+7, px+6*2, py+0, SSD1306_WHITE);
 }
 
 #define S_RSSI_MIN -135.0
-#define S_RSSI_MAX -60.0
+#define S_RSSI_MAX -75.0
 #define S_RSSI_SPAN (S_RSSI_MAX-S_RSSI_MIN)
 void draw_signal_bars(int px, int py) {
   int rssi_val = last_rssi;
@@ -266,6 +284,7 @@ void draw_signal_bars(int px, int py) {
   int signal = ((rssi_val - S_RSSI_MIN)*(1.0/S_RSSI_SPAN))*100.0;
 
   if (signal > 100.0) signal = 100.0;
+  if (signal < 0.0) signal = 0.0;
 
   stat_area.fillRect(px, py, 13, 7, SSD1306_BLACK);
   // Serial.printf("Last SNR: %.2f\n, quality: %.2f\n", snr, quality);
@@ -359,12 +378,76 @@ void draw_disp_area() {
     if (firmware_update_mode) disp_area.drawBitmap(0, p_by, bm_fw_update, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
   } else {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
-      if (device_signatures_ok()) {
-        disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+      if (radio_online && display_diagnostics) {
+        disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK); disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
+        disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE);
+
+        disp_area.setCursor(2, 13);
+        disp_area.print("On");
+        disp_area.setCursor(14, 13);
+        disp_area.print("@");
+        disp_area.setCursor(21, 13);
+        disp_area.printf("%.1fKbps", (float)lora_bitrate/1000.0);
+
+        //disp_area.setCursor(31, 23-1);
+        disp_area.setCursor(2, 23-1);
+        disp_area.print("Airtime:");
+        
+        disp_area.setCursor(11, 33-1);
+        if (total_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", total_channel_util*100.0);
+          disp_area.printf("%.1f%%", airtime*100.0);
+        } else {
+          //disp_area.printf("%.0f%%", total_channel_util*100.0);
+          disp_area.printf("%.0f%%", airtime*100.0);
+        }
+        disp_area.drawBitmap(2, 26-1, bm_hg_low, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+
+        disp_area.setCursor(32+11, 33-1);
+        if (longterm_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", longterm_channel_util*100.0);
+          disp_area.printf("%.1f%%", longterm_airtime*100.0);
+        } else {
+          //disp_area.printf("%.0f%%", longterm_channel_util*100.0);
+          disp_area.printf("%.0f%%", longterm_airtime*100.0);
+        }
+        disp_area.drawBitmap(32+2, 26-1, bm_hg_high, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+
+
+        disp_area.setTextColor(SSD1306_BLACK);
+        disp_area.setCursor(2, 46);
+        disp_area.print("Channel");
+        disp_area.setCursor(38, 46);
+        disp_area.print("Load:");
+        
+        disp_area.setCursor(11, 57);
+        if (total_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", airtime*100.0);
+          disp_area.printf("%.1f%%", total_channel_util*100.0);
+        } else {
+          //disp_area.printf("%.0f%%", airtime*100.0);
+          disp_area.printf("%.0f%%", total_channel_util*100.0);
+        }
+        disp_area.drawBitmap(2, 50, bm_hg_low, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
+
+        disp_area.setCursor(32+11, 57);
+        if (longterm_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", longterm_airtime*100.0);
+          disp_area.printf("%.1f%%", longterm_channel_util*100.0);
+        } else {
+          //disp_area.printf("%.0f%%", longterm_airtime*100.0);
+          disp_area.printf("%.0f%%", longterm_channel_util*100.0);
+        }
+        disp_area.drawBitmap(32+2, 50, bm_hg_high, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
+
       } else {
-        disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+        if (device_signatures_ok()) {
+          disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+        } else {
+          disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+        }
       }
-      
+
       if (!hw_ready || radio_error || !device_firmware_ok()) {
         if (!device_firmware_ok()) {
           disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
@@ -393,30 +476,24 @@ void draw_disp_area() {
           if (not community_fw and disp_page == 0) disp_page = 1;
         }
 
-        if (disp_page == 0) {
-          if (true || device_signatures_ok()) {
-            if (radio_online) {
-              disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-            } else {
-              disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-            }
-          } else {
-            disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          }
-        } else if (disp_page == 1) {
-          if (radio_online) {
+        if (radio_online) {
+          if (!display_diagnostics) {
             disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          } else{
+          }
+        } else {
+          if (disp_page == 0) {
+            if (true || device_signatures_ok()) {
+              disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            } else {
+              disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            }
+          } else if (disp_page == 1) {
             if (!console_active) {
               disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             } else {
               disp_area.drawBitmap(0, 37, bm_console_active, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             }
-          }
-        } else if (disp_page == 2) {
-          if (radio_online) {
-            disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          } else{
+          } else if (disp_page == 2) {
             disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             char *v_str = (char*)malloc(3+1);
             sprintf(v_str, "%01d%02d", MAJ_VERS, MIN_VERS);

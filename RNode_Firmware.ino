@@ -91,6 +91,8 @@ void setup() {
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
   
   #if MCU_VARIANT == MCU_ESP32
+    init_channel_stats();
+
     // Check installed transceiver chip and
     // probe boot parameters.
     if (LoRa.preInit()) {
@@ -321,6 +323,8 @@ bool startRadio() {
 
         radio_online = true;
 
+        init_channel_stats();
+
         setTXPower();
         setBandwidth();
         setSpreadingFactor();
@@ -385,6 +389,7 @@ void flushQueue(void) {
   if (!queue_flushing) {
     queue_flushing = true;
 
+    led_tx_on();
     uint16_t processed = 0;
 
     #if MCU_VARIANT == MCU_ESP32
@@ -406,17 +411,65 @@ void flushQueue(void) {
         processed++;
       }
     }
+
+    lora_receive();
+    led_tx_off();
+    post_tx_yield_timeout = millis()+(lora_post_tx_yield_slots*csma_slot_ms);
   }
 
   queue_height = 0;
   queued_bytes = 0;
+  #if MCU_VARIANT == MCU_ESP32
+    update_airtime();
+  #endif
   queue_flushing = false;
+}
+
+#define PHY_HEADER_LORA_SYMBOLS 8
+void add_airtime(uint16_t written) {
+  #if MCU_VARIANT == MCU_ESP32
+    float packet_cost_ms = 0.0;
+    float payload_cost_ms = ((float)written * lora_us_per_byte)/1000.0;
+    packet_cost_ms += payload_cost_ms;
+    packet_cost_ms += (lora_preamble_symbols+4.25)*lora_symbol_time_ms;
+    packet_cost_ms += PHY_HEADER_LORA_SYMBOLS * lora_symbol_time_ms;
+    uint16_t cb = current_airtime_bin();
+    uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
+    airtime_bins[cb] += packet_cost_ms;
+    airtime_bins[nb] = 0;
+  #endif
+}
+
+void update_airtime() {
+  #if MCU_VARIANT == MCU_ESP32
+    uint16_t cb = current_airtime_bin();
+    uint16_t pb = cb-1; if (cb-1 < 0) { pb = AIRTIME_BINS-1; }
+    uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
+    airtime_bins[nb] = 0;
+    airtime = (float)(airtime_bins[cb]+airtime_bins[pb])/(2.0*AIRTIME_BINLEN_MS);
+
+    uint32_t longterm_airtime_sum = 0;
+    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) {
+      longterm_airtime_sum += airtime_bins[bin];
+    }
+    longterm_airtime = (float)longterm_airtime_sum/(float)AIRTIME_LONGTERM_MS;
+
+    float longterm_channel_util_sum = 0.0;
+    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) {
+      longterm_channel_util_sum += longterm_bins[bin];
+    }
+    longterm_channel_util = (float)longterm_channel_util_sum/(float)AIRTIME_BINS;
+
+    #if MCU_VARIANT == MCU_ESP32
+      update_csma_p();
+    #endif
+    kiss_indicate_channel_stats();
+  #endif
 }
 
 void transmit(uint16_t size) {
   if (radio_online) {
     if (!promisc) {
-      led_tx_on();
       uint16_t  written = 0;
       uint8_t header  = random(256) & 0xF0;
 
@@ -428,22 +481,19 @@ void transmit(uint16_t size) {
       LoRa.write(header); written++;
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa.write(tbuf[i]);  
+        LoRa.write(tbuf[i]);
 
         written++;
 
         if (written == 255) {
-          LoRa.endPacket();
+          LoRa.endPacket(); add_airtime(written);
           LoRa.beginPacket();
           LoRa.write(header);
           written = 1;
         }
       }
 
-      LoRa.endPacket();
-      led_tx_off();
-
-      lora_receive();
+      LoRa.endPacket(); add_airtime(written);
     } else {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
@@ -469,10 +519,7 @@ void transmit(uint16_t size) {
 
         written++;
       }
-      LoRa.endPacket();
-      led_tx_off();
-
-      lora_receive();
+      LoRa.endPacket(); add_airtime(written);
     }
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
@@ -643,6 +690,52 @@ void serialCallback(uint8_t sbyte) {
         kiss_indicate_radiostate();
         Serial.println("start radio");
       }
+    } else if (command == CMD_ST_ALOCK) {
+      if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 2) {
+          uint16_t at = (uint16_t)cmdbuf[0] << 8 | (uint16_t)cmdbuf[1];
+
+          if (at == 0) {
+            st_airtime_limit = 0.0;
+          } else {
+            st_airtime_limit = (float)at/(100.0*100.0);
+            if (st_airtime_limit >= 1.0) { st_airtime_limit = 0.0; }
+          }
+          kiss_indicate_st_alock();
+        }
+    } else if (command == CMD_LT_ALOCK) {
+      if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 2) {
+          uint16_t at = (uint16_t)cmdbuf[0] << 8 | (uint16_t)cmdbuf[1];
+
+          if (at == 0) {
+            lt_airtime_limit = 0.0;
+          } else {
+            lt_airtime_limit = (float)at/(100.0*100.0);
+            if (lt_airtime_limit >= 1.0) { lt_airtime_limit = 0.0; }
+          }
+          kiss_indicate_lt_alock();
+        }
     } else if (command == CMD_STAT_RX) {
       kiss_indicate_stat_rx();
     } else if (command == CMD_STAT_TX) {
@@ -811,7 +904,7 @@ void serialCallback(uint8_t sbyte) {
           }
 
           if (frame_len == DEV_HASH_LEN) {
-            memcpy(dev_firmware_hash_target, cmdbuf, DEV_SIG_LEN);
+            memcpy(dev_firmware_hash_target, cmdbuf, DEV_HASH_LEN);
             device_save_firmware_hash();
           }
       #endif
@@ -842,6 +935,21 @@ void serialCallback(uint8_t sbyte) {
         }
 
       #endif
+    } else if (command == CMD_DISP_ADDR) {
+      #if HAS_DISPLAY
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            display_addr = sbyte;
+            da_conf_save(display_addr);
+        }
+
+      #endif
     }
   }
 }
@@ -863,37 +971,73 @@ void updateModemStatus() {
     portEXIT_CRITICAL(&update_lock);
   #endif
 
-  if (status & SIG_DETECT == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
-  if (status & SIG_SYNCED == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
-  if (status & RX_ONGOING == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
+  if ((status & SIG_DETECT) == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
+  if ((status & SIG_SYNCED) == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
+  if ((status & RX_ONGOING) == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
 
-  if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
-    if (dcd_count < dcd_threshold) {
-      dcd_count++;
-      dcd = true;
-    } else {
-      dcd = true;
-      dcd_led = true;
+  // if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
+  if (stat_signal_detected || stat_signal_synced) {
+    if (stat_rx_ongoing) {
+      if (dcd_count < dcd_threshold) {
+        dcd_count++;
+      } else {
+        last_dcd = last_status_update;
+        dcd_led = true;
+        dcd = true;
+      }
     }
   } else {
-    if (dcd_count > 0) {
-      dcd_count--;
-    } else {
+    #define DCD_LED_STEP_D 3
+    if (dcd_count == 0) {
       dcd_led = false;
+    } else if (dcd_count > DCD_LED_STEP_D) {
+      dcd_count -= DCD_LED_STEP_D;
+    } else {
+      dcd_count = 0;
     }
-    dcd = false;
+
+    if (last_status_update > last_dcd+csma_slot_ms) {
+      dcd = false;
+      dcd_led = false;
+      dcd_count = 0;
+    }
   }
 
   if (dcd_led) {
     led_rx_on();
   } else {
-    led_rx_off();
+    if (airtime_lock) {
+      led_indicate_airtime_lock();
+    } else {
+      led_rx_off();
+    }
   }
 }
 
 void checkModemStatus() {
   if (millis()-last_status_update >= status_interval_ms) {
     updateModemStatus();
+
+    #if MCU_VARIANT == MCU_ESP32
+      util_samples[dcd_sample] = dcd;
+      dcd_sample = (dcd_sample+1)%DCD_SAMPLES;
+      if (dcd_sample % UTIL_UPDATE_INTERVAL == 0) {
+        int util_count = 0;
+        for (int ui = 0; ui < DCD_SAMPLES; ui++) {
+          if (util_samples[ui]) util_count++;
+        }
+        local_channel_util = (float)util_count / (float)DCD_SAMPLES;
+        total_channel_util = local_channel_util + airtime;
+        if (total_channel_util > 1.0) total_channel_util = 1.0;
+
+        int16_t cb = current_airtime_bin();
+        uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
+        if (total_channel_util > longterm_bins[cb]) longterm_bins[cb] = total_channel_util;
+        longterm_bins[nb] = 0.0;
+
+        update_airtime();
+      }
+    #endif
   }
 }
 
@@ -1033,10 +1177,17 @@ void validate_status() {
   }
 }
 
+#if MCU_VARIANT == MCU_ESP32
+  #define _e 2.71828183
+  #define _S 10.0
+  float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
+  void update_csma_p() {
+      csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime)))*255.0);
+}
+#endif
+
 void loop() {
   if (radio_online) {
-    checkModemStatus();
-
     #if MCU_VARIANT == MCU_ESP32
       if (packet_ready) {
         portENTER_CRITICAL(&update_lock);
@@ -1047,24 +1198,53 @@ void loop() {
         kiss_indicate_stat_snr();
         kiss_write_packet();
       }
+
+      airtime_lock = false;
+      if (st_airtime_limit != 0.0 && airtime >= st_airtime_limit) airtime_lock = true;
+      if (lt_airtime_limit != 0.0 && longterm_airtime >= lt_airtime_limit) airtime_lock = true;
     #endif
 
-    if (queue_height > 0) {
-      if (!dcd_waiting) updateModemStatus();
+    checkModemStatus();
+    if (!airtime_lock) {
+      if (queue_height > 0) {
+        #if MCU_VARIANT == MCU_ESP32
+          long check_time = millis();
+          if (check_time > post_tx_yield_timeout) {
+            if (dcd_waiting && (check_time >= dcd_wait_until)) { dcd_waiting = false; }
+            if (!dcd_waiting) {
+              for (uint8_t dcd_i = 0; dcd_i < dcd_threshold*2; dcd_i++) {
+                delay(STATUS_INTERVAL_MS); updateModemStatus();
+              }
 
-      if (!dcd && !dcd_led) {
-        if (dcd_waiting) delay(lora_rx_turnaround_ms);
-
-        updateModemStatus();
-
-        if (!dcd) {
-          dcd_waiting = false;
-
-          flushQueue();
+              if (!dcd) {
+                uint8_t csma_r = (uint8_t)random(256);
+                if (csma_p >= csma_r) {
+                  flushQueue();
+                } else {
+                  dcd_waiting = true;
+                  dcd_wait_until = millis()+csma_slot_ms;
+                }
+              }
+            }
+          }
           
-        }
-      } else {
-        dcd_waiting = true;
+        #else
+          if (!dcd_waiting) updateModemStatus();
+
+          if (!dcd && !dcd_led) {
+            if (dcd_waiting) delay(lora_rx_turnaround_ms);
+
+            updateModemStatus();
+
+            if (!dcd) {
+              dcd_waiting = false;
+              flushQueue();
+            }
+
+          } else {
+            dcd_waiting = true;
+          }
+        #endif
       }
     }
   
