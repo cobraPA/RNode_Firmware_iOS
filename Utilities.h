@@ -564,23 +564,33 @@ int8_t  led_standby_direction = 0;
 #endif
 
 void serial_write(uint8_t byte) {
-	#if HAS_BLUETOOTH
-		if (bt_state != BT_STATE_CONNECTED) {
-			Serial.write(byte);
-		} else {
+  //Serial.println("serial_write -- to blue ..");
       #if HAS_BLE
         if (bt_state == BT_STATE_BLE_CONNECTED) {
           //Print ("ble write!");
           //Serial.println("ble write!");
           BLEWrite(byte);
-
-        } else 
+        }
       #endif
-			    SerialBT.write(byte);
-		}
-	#else
-		Serial.write(byte);
-	#endif
+
+//	#if HAS_BLUETOOTH
+//		if (bt_state != BT_STATE_CONNECTED) {
+//			Serial.write(byte);
+//		} else {
+//      #if HAS_BLE
+//        if (bt_state == BT_STATE_BLE_CONNECTED) {
+          //Print ("ble write!");
+//          Serial.println("ble write!");
+ //         BLEWrite(byte);
+
+//        } else 
+//      #endif
+//			    SerialBT.write(byte);
+//		}
+//	#else
+//		Serial.write(byte);
+//	#endif
+
 }
 
 void escaped_serial_write(uint8_t byte) {
@@ -688,6 +698,8 @@ void kiss_indicate_bandwidth() {
 	escaped_serial_write(lora_bw>>8);
 	escaped_serial_write(lora_bw);
 	serial_write(FEND);
+  Serial.print('kiss BW ');
+  Serial.println(lora_bw);
 }
 
 void kiss_indicate_frequency() {

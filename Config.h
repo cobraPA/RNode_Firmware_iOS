@@ -134,7 +134,19 @@
 		//
 		// #define BOARD_MODEL BOARD_GENERIC_ESP32
     //#define BOARD_MODEL BOARD_LORA32_V2_0
-    #define BOARD_MODEL BOARD_LORA32_V1_0
+    
+    // Used for Heltec, basic working, display seems live
+    // but shows 'hardware failure' msg
+    // Working with my BLE firmware,
+    // use Wifi LoRa 32(V2) target and this define.
+    //#define BOARD_MODEL BOARD_LORA32_V1_0
+
+     // reboot loop on my t-beam w/ target Wifi LoRa32(V2)
+    #define BOARD_MODEL BOARD_TBEAM
+    
+    // reboot loop also on T-BEAM target Wifi Lora 32(V2)
+    //#define BOARD_MODEL BOARD_LORA32_V2_1
+
 
 		#if BOARD_MODEL == BOARD_GENERIC_ESP32
 			const int pin_cs = 4;
@@ -154,6 +166,7 @@
             #define HAS_PMU true
             #define HAS_TCXO true
             #define HAS_BLUETOOTH true
+            #define HAS_BLE true
             #define HAS_CONSOLE true
             #define HAS_SD false
 		#elif BOARD_MODEL == BOARD_HUZZAH32
@@ -192,6 +205,7 @@
 			#endif
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
+            #define HAS_BLE true
             #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_1
 			const int pin_cs = 18;
@@ -206,6 +220,7 @@
 			#endif
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
+            #define HAS_BLE true
             #define HAS_PMU true
             #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_HELTEC32_V2

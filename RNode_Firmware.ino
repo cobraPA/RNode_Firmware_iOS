@@ -124,6 +124,8 @@ void setup() {
       eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
     }
     disp_ready = display_init();
+    Serial.print("disp ready = ");
+    Serial.println(disp_ready);
     update_display();
   #endif
 
@@ -300,10 +302,14 @@ void ISR_VECT receive_callback(int packet_size) {
 
 bool startRadio() {
   update_radio_lock();
+  Serial.print("do radio ");
   if (!radio_online && !console_active) {
+    Serial.print(" not-online ");
     if (!radio_locked && hw_ready) {
-      if (!LoRa.begin(lora_freq)) {
-        // The radio could not be started.
+      Serial.print("not-locked ");
+    if (!LoRa.begin(lora_freq)) {
+      Serial.println(" error ");
+      // The radio could not be started.
         // Indicate this failure over both the
         // serial port and with the onboard LEDs
         radio_error = true;
@@ -311,6 +317,8 @@ bool startRadio() {
         led_indicate_error(0);
         return false;
       } else {
+        Serial.print(" online ");
+
         radio_online = true;
 
         setTXPower();
@@ -329,6 +337,7 @@ bool startRadio() {
         // that the radio is now on
         kiss_indicate_radiostate();
         led_indicate_info(3);
+        Serial.println(" started!");
         return true;
       }
 
@@ -339,12 +348,14 @@ bool startRadio() {
       radio_online = false;
       kiss_indicate_radiostate();
       led_indicate_warning(3);
+      Serial.println(" locked-nostart!");
       return false;
     }
   } else {
     // If radio is already on, we silently
     // ignore the request.
     kiss_indicate_radiostate();
+    Serial.println(" already on");
     return true;
   }
 }
@@ -355,6 +366,9 @@ void stopRadio() {
 }
 
 void update_radio_lock() {
+    //static char lock[40];
+    //sprintf(lock, "lock chk %d %d %x %d", lora_freq, lora_bw, lora_txp, lora_sf);
+    //Serial.println(lock);
   if (lora_freq != 0 && lora_bw != 0 && lora_txp != 0xFF && lora_sf != 0) {
     radio_locked = false;
   } else {
@@ -467,6 +481,10 @@ void transmit(uint16_t size) {
 }
 
 void serialCallback(uint8_t sbyte) {
+//    Serial.print("serialCallback ");
+//    Serial.print(sbyte);
+//    Serial.print(" - ");
+
   if (IN_FRAME && sbyte == FEND && command == CMD_DATA) {
     IN_FRAME = false;
 
@@ -537,6 +555,8 @@ void serialCallback(uint8_t sbyte) {
             lora_freq = freq;
             if (op_mode == MODE_HOST) setFrequency();
             kiss_indicate_frequency();
+            Serial.print("freq ");
+            Serial.println(lora_freq);
           }
         }
     } else if (command == CMD_BANDWIDTH) {
@@ -560,6 +580,9 @@ void serialCallback(uint8_t sbyte) {
             lora_bw = bw;
             if (op_mode == MODE_HOST) setBandwidth();
             kiss_indicate_bandwidth();
+            Serial.print("BW ");
+            Serial.println(lora_bw);
+
           }
         }
     } else if (command == CMD_TXPOWER) {
@@ -618,6 +641,7 @@ void serialCallback(uint8_t sbyte) {
       } else if (sbyte == 0x01) {
         startRadio();
         kiss_indicate_radiostate();
+        Serial.println("start radio");
       }
     } else if (command == CMD_STAT_RX) {
       kiss_indicate_stat_rx();
@@ -633,8 +657,17 @@ void serialCallback(uint8_t sbyte) {
     } else if (command == CMD_RANDOM) {
       kiss_indicate_random(getRandom());
     } else if (command == CMD_DETECT) {
+    //Serial.println("BLE CMD_DETECT ");
+    //Serial.println
+//    Serial.print(sbyte);
+//    Serial.print(" - ");
+
       if (sbyte == DETECT_REQ) {
-        if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
+      //  if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
+        if ((bt_state != BT_STATE_CONNECTED) || (bt_state != BT_STATE_BLE_CONNECTED)) 
+          {
+            cable_state = CABLE_STATE_CONNECTED;
+          }
         kiss_indicate_detect();
       }
     } else if (command == CMD_PROMISC) {
@@ -921,15 +954,19 @@ void validate_status() {
           if (sx1276_installed) {
             #if PLATFORM == PLATFORM_ESP32
               if (device_init()) {
+                Serial.println("hw ready 1");
                 hw_ready = true;
               } else {
                 hw_ready = false;
+                Serial.println("hw ! ready 1");
               }
             #else
               hw_ready = true;
+                Serial.println("hw ready 2");
             #endif
           } else {
             hw_ready = false;
+            Serial.println("hw ! ready 3");
             Serial.write("No SX1276/SX1278 radio module found\r\n");
             #if HAS_DISPLAY
               if (disp_ready) {
@@ -943,9 +980,12 @@ void validate_status() {
             eeprom_conf_load();
             op_mode = MODE_TNC;
             startRadio();
+            Serial.println("hw ready - start radio");
+
           }
         } else {
           hw_ready = false;
+          Serial.println("hw ! ready 4");
           #if HAS_DISPLAY
             if (disp_ready) {
               device_init_done = true;
@@ -955,15 +995,23 @@ void validate_status() {
         }
       } else {
         hw_ready = false;
+        Serial.println("hw ! ready 5  - override  - TODO");
+        
+        //  override eeprom flags
+        hw_ready = true;
+        //
+
         #if HAS_DISPLAY
           if (disp_ready) {
             device_init_done = true;
             update_display();
+            Serial.println("update display called");
           }
         #endif
       }
     } else {
       hw_ready = false;
+      Serial.println("hw ! ready 6");
       #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
@@ -973,6 +1021,7 @@ void validate_status() {
     }
   } else {
     hw_ready = false;
+    Serial.println("hw ! ready 7 - bad boot vector");
     Serial.write("Error, incorrect boot vector\r\n");
     #if HAS_DISPLAY
       if (disp_ready) {

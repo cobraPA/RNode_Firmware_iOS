@@ -21,6 +21,8 @@ we continue supporting Classic Bluetooth for Android
 */
 
 /*
+
+
 Some setup based on BLE 'UART' model from here
 https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLETests/Arduino/BLE_uart/BLE_uart.ino
 */
@@ -50,8 +52,13 @@ bool oldDeviceConnected = false;
 
 BLECharacteristic *pCharacteristicTx;
 
+// RX Buffer
 FIFOBuffer BLE_FIFO;
 uint8_t BLE_Buffer[CONFIG_UART_BUFFER_SIZE+1];
+
+// BLE transmit consolidation buffer
+FIFOBuffer BLE_TX_FIFO;
+uint8_t BLE_TX_Buffer[400];
 
 
 //----------------------------
@@ -59,6 +66,7 @@ uint8_t BLE_Buffer[CONFIG_UART_BUFFER_SIZE+1];
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
+      bt_state = BT_STATE_BLE_CONNECTED;
 
       Serial.println("Connect..");
 
@@ -66,6 +74,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
+      bt_state = BT_STATE_NA;
+
       Serial.println("Disconnect..");
       delay(500);
       pServer->startAdvertising(); // restart advertising
@@ -81,11 +91,11 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             fifo_push(&BLE_FIFO, rxValue[i] );
           }
 
-        Serial.print("RX: ");
-        for (int i = 0; i < rxValue.length(); i++)
-          Serial.print(rxValue[i]);
+        //Serial.print("RX: ");
+        //for (int i = 0; i < rxValue.length(); i++)
+          //Serial.print(rxValue[i]);
 
-        Serial.println();
+        //Serial.println();
 
   /*
       if (rxValue.length() > 0) {
@@ -112,6 +122,10 @@ bool ble_init() {
   // Initialise serial communication
   memset(BLE_Buffer, 0, sizeof(BLE_Buffer));
   fifo_init(&BLE_FIFO, BLE_Buffer, CONFIG_UART_BUFFER_SIZE);
+
+  memset(BLE_TX_Buffer, 0, sizeof(BLE_TX_Buffer));
+  fifo_init(&BLE_TX_FIFO, BLE_TX_Buffer, sizeof(BLE_TX_Buffer)-1);
+
 
   BLEDevice::init("RNode");
   //BLEDevice::init(bt_devname);
@@ -154,7 +168,9 @@ bool ble_init() {
 
   BLECharacteristic *pCharacteristicRx = pService->createCharacteristic(
                                          CHARACTERISTIC_UUID_RX,
-                                         BLECharacteristic::PROPERTY_WRITE 
+                                         BLECharacteristic::PROPERTY_WRITE |
+                                         /* support no-response writes */
+                                         BLECharacteristic::PROPERTY_WRITE_NR 
                                          /* BLECharacteristic::PROPERTY_WRITE */
                                          /* NimBLE
                                          NIMBLE_PROPERTY::READ |
@@ -169,13 +185,15 @@ bool ble_init() {
   pCharacteristicTx = pService->createCharacteristic(
                                          CHARACTERISTIC_UUID_TX,
                                          /*BLECharacteristic::PROPERTY_WRITE  | */
+                                         BLECharacteristic::PROPERTY_READ |
                                          BLECharacteristic::PROPERTY_NOTIFY
                                        );
   // Not required?  Used in BLE UART sample
   //pCharacteristicTx->addDescriptor(new BLE2902());
 
   // sample write
-  //pCharacteristicTx->setValue("Hello World says Neil");
+//  pCharacteristicTx->setValue("Hello World says Neil");
+//  pCharacteristicTx->notify();
 
   pService->start();
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
@@ -186,17 +204,75 @@ bool ble_init() {
   return true;
 }
 
+
+#define FEND			0xC0
+int RX_Fend_flag = 0;
+
 void BLEWrite(uint8_t byte) {
-  char val[2];
-  val[0] = byte;
-  val[1] = 0;
+//  char val[2];
+//  val[0] = byte;
+//  val[1] = 0;
   //std::string send( (char) byte);
-  pCharacteristicTx->setValue(val);
+  //Serial.println("BLEWrite..");
+//  pCharacteristicTx->setValue(val);
+//  pCharacteristicTx->notify();
+
+  uint8_t outbuf[400];
+
+  if (!fifo_isfull(&BLE_TX_FIFO)) {
+    fifo_push(&BLE_TX_FIFO, byte );
+  } else {
+    Serial.println("TX fifo full");
+  }
+  //Serial.print("fifo ");
+  //Serial.println( (char)byte);
+  switch( RX_Fend_flag) {
+    case 0:
+          if (byte == FEND) {
+            RX_Fend_flag = 1;
+            //Serial.println("found FEND");
+          }
+          break;
+    case 1:
+          if (byte == FEND) {
+            RX_Fend_flag = 0;
+            // send it
+            uint8_t data = 0;
+            int txLen = 0;
+
+            // grab first FEND
+            if (!fifo_isempty(&BLE_TX_FIFO)) {
+              char sbyte = fifo_pop(&BLE_TX_FIFO);
+              data = sbyte;
+              outbuf[txLen++] = data;
+            }
+            int done = 0;
+            while( !done) {
+              char sbyte = fifo_pop(&BLE_TX_FIFO);
+              data = sbyte;
+              outbuf[txLen++] = data;
+              //Serial.print("out len");
+              //Serial.println(txLen);
+              if( data == FEND ) done = 1;
+            }
+
+              // set with size
+              //void setValue(uint8_t* data, size_t size);
+            pCharacteristicTx->setValue(outbuf, txLen);
+            pCharacteristicTx->notify();
+
+          }
+          break;
+    default:
+      break;
+  }
+
 }
 
 uint8_t BLERead( void ) {
   uint8_t data = 0;
 
+  //Serial.print("BLERead ");
   #if MCU_VARIANT == MCU_ESP32
       //buffer_serial();
       if (!fifo_isempty(&BLE_FIFO)) {
@@ -209,6 +285,8 @@ uint8_t BLERead( void ) {
       data = sbyte;
     }
   #endif
+
+  //Serial.print(data);
 
   return data;
 }
