@@ -139,10 +139,10 @@
     // but shows 'hardware failure' msg
     // Working with my BLE firmware,
     // use Wifi LoRa 32(V2) target and this define.
-    //#define BOARD_MODEL BOARD_LORA32_V1_0
+    #define BOARD_MODEL BOARD_LORA32_V1_0
 
      // reboot loop on my t-beam w/ target Wifi LoRa32(V2)
-    #define BOARD_MODEL BOARD_TBEAM
+    //#define BOARD_MODEL BOARD_TBEAM
     
     // reboot loop also on T-BEAM target Wifi Lora 32(V2)
     //#define BOARD_MODEL BOARD_LORA32_V2_1
