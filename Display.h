@@ -182,7 +182,7 @@ void draw_bt_icon(int px, int py) {
     stat_area.drawBitmap(px, py, bm_bt+1*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
   } else if (bt_state == BT_STATE_PAIRING) {
     stat_area.drawBitmap(px, py, bm_bt+2*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
-  } else if (bt_state == BT_STATE_CONNECTED) {
+  } else if ((bt_state == BT_STATE_CONNECTED) || (bt_state == BT_STATE_BLE_CONNECTED)) {
     stat_area.drawBitmap(px, py, bm_bt+3*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
   } else {
     stat_area.drawBitmap(px, py, bm_bt+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
@@ -322,7 +322,10 @@ void draw_waterfall(int px, int py) {
 
 bool stat_area_intialised = false;
 void draw_stat_area() {
+  //Serial.print("draw_stat - init ");
+  //Serial.println(device_init_done);
   if (device_init_done) {
+    //Serial.println("draw_stat 2");
     if (!stat_area_intialised) {
       stat_area.drawBitmap(0, 0, bm_frame, 64, 64, SSD1306_WHITE, SSD1306_BLACK);
       stat_area_intialised = true;
@@ -342,7 +345,9 @@ void draw_stat_area() {
 }
 
 void update_stat_area() {
-  if (eeprom_ok && !firmware_update_mode && !console_active) {
+  // override eeprom check for BLE
+  //if (eeprom_ok && !firmware_update_mode && !console_active) {
+  if ( !firmware_update_mode && !console_active) {
     
     draw_stat_area();
     if (disp_mode == DISP_MODE_PORTRAIT) {
@@ -365,7 +370,9 @@ void update_stat_area() {
 }
 
 #define START_PAGE 0
-const uint8_t pages = 3;
+//const uint8_t pages = 3;
+// BLE - node name on page 3
+const uint8_t pages = 4;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
   if (!device_init_done || firmware_update_mode) {
@@ -475,7 +482,6 @@ void draw_disp_area() {
           last_page_flip = millis();
           if (not community_fw and disp_page == 0) disp_page = 1;
         }
-
         if (radio_online) {
           if (!display_diagnostics) {
             disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
@@ -505,8 +511,32 @@ void draw_disp_area() {
               disp_area.drawBitmap(dxp, 37+16, bm_n_uh+bm_offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
             }
             free(v_str);
+
+            // add 'BLE' at bottom of version display
+            disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_BLACK);
+            // upper left between text and number
+            //disp_area.setCursor(2, 37+16);
+            // lower right
+            //disp_area.setCursor(2, 37+16+8);
+            // right edge above number
+            //disp_area.setCursor(2+24+18, 37+16);
+            // 4+24+18, 37+16+10
+            disp_area.setCursor(46, 63);
+            disp_area.print("BLE");
+
             disp_area.drawLine(27, 37+19, 28, 37+19, SSD1306_BLACK);
             disp_area.drawLine(27, 37+20, 28, 37+20, SSD1306_BLACK);
+
+          } else if (disp_page == 3) {
+            // fill upper area
+            //disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK);
+            // fill lower area
+            disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
+
+            //disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_BLACK);
+            disp_area.setCursor(3, 37+8);
+            disp_area.print(bt_devname);
           }
         }
       }
@@ -517,6 +547,7 @@ void draw_disp_area() {
 }
 
 void update_disp_area() {
+  //Serial.println("...update disp area...");
   draw_disp_area();
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   if (disp_mode == DISP_MODE_LANDSCAPE) {
@@ -527,6 +558,7 @@ void update_disp_area() {
 }
 
 void update_display() {
+  //Serial.println("...update display...");
   if (millis()-last_disp_update >= disp_update_interval) {
     if (display_contrast != display_intensity) {
       display_contrast = display_intensity;

@@ -26,7 +26,8 @@ uint32_t bt_pairing_started = 0;
 uint8_t dev_bt_mac[BT_DEV_ADDR_LEN];
 char bt_da[BT_DEV_ADDR_LEN];
 char bt_dh[BT_DEV_HASH_LEN];
-char bt_devname[11];
+// moved to config.h, shared with BLE and display
+//char bt_devname[11];
 
 #if MCU_VARIANT == MCU_ESP32
 

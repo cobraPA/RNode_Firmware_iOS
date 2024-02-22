@@ -11,6 +11,7 @@ From
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include <BLEAdvertising.h>
 // commented usage of 2902 for now...
 //#include <BLE2902.h>
 
@@ -67,6 +68,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
       bt_state = BT_STATE_BLE_CONNECTED;
+      cable_state = CABLE_STATE_DISCONNECTED;
+
 
       Serial.println("Connect..");
 
@@ -74,7 +77,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
-      bt_state = BT_STATE_NA;
+      bt_state = BT_STATE_ON;
 
       Serial.println("Disconnect..");
       delay(500);
@@ -117,7 +120,8 @@ class MyCallbacks: public BLECharacteristicCallbacks {
 bool ble_init() {
   //Serial.begin(115200);
   //Serial.println("Starting BLE work!");
-  static char bt_devname[15];
+  // move to global - config.h
+  //static char bt_devname[15];
 
   // Initialise serial communication
   memset(BLE_Buffer, 0, sizeof(BLE_Buffer));
@@ -126,6 +130,8 @@ bool ble_init() {
   memset(BLE_TX_Buffer, 0, sizeof(BLE_TX_Buffer));
   fifo_init(&BLE_TX_FIFO, BLE_TX_Buffer, sizeof(BLE_TX_Buffer)-1);
 
+  ////char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
+  ////data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
 
   BLEDevice::init("RNode");
   //BLEDevice::init(bt_devname);
@@ -138,12 +144,23 @@ bool ble_init() {
                 data[i] =  (*bda_ptr)[i];
                 //data[i] =  myAddr.address[i];
             }
-            data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
+// moved up for init
+//            data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
             unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
             memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
             sprintf(bt_devname, "RNode_%02X%02X", bt_dh[14], bt_dh[15]);
             bt_devname[10]=0;
             free(data);
+
+//BLEAdvertisementData *advData = new BLEAdvertisementData();
+// Neither made a difference when added to advertisement later from iPhone
+//advData->setShortName(bt_devname);
+//advData->setName(bt_devname);
+
+// For now, once we have address, then deinit and re-init with
+// known name
+  BLEDevice::deinit();
+  BLEDevice::init(bt_devname);
 
 // Heltec device returned RNode_5949 for first test device
 
@@ -197,6 +214,15 @@ bool ble_init() {
 
   pService->start();
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
+  // from https://randomnerdtutorials.com/esp32-bluetooth-low-energy-ble-arduino-ide/
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  
+  // Neither of these worked (to show device
+  // name on iOS)
+  //pAdvertising->setShortName(bt_devname);
+  //pAdvertising->setAdvertisementData(*advData);
+
   pAdvertising->start();
 //  Serial.println("Characteristic defined! Now you can read it in your phone!");
 
