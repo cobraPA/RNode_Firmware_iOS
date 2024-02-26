@@ -23,19 +23,24 @@ prep: prep-avr prep-esp32 prep-samd
 
 prep-avr:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install arduino:avr
-	arduino-cli core install unsignedio:avr
+	arduino-cli core install arduino:avr --config-file arduino-cli.yaml
+	arduino-cli core install unsignedio:avr --config-file arduino-cli.yaml
 
 prep-esp32:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install esp32:esp32
+	arduino-cli core install esp32:esp32 --config-file arduino-cli.yaml
 	arduino-cli lib install "Adafruit SSD1306"
 	arduino-cli lib install "XPowersLib"
 	arduino-cli lib install "Crypto"
 
 prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install adafruit:samd
+	arduino-cli core install adafruit:samd --config-file arduino-cli.yaml
+
+prep-nrf:
+	arduino-cli core update-index --config-file arduino-cli.yaml
+	arduino-cli core install rakwireless:nrf52 --config-file arduino-cli.yaml
+	pip install adafruit-nrfutil --upgrade
 
 console-site:
 	make -C Console clean site
@@ -58,6 +63,12 @@ firmware-mega2560:
 firmware-tbeam:
 	arduino-cli compile --fqbn esp32:esp32:t-beam -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\""
 
+firmware-tbeam_sx126x:
+	arduino-cli compile --fqbn esp32:esp32:t-beam -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\" \"-DMODEM=0x03\""
+
+firmware-t3s3:
+	arduino-cli compile --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x42\""
+
 firmware-lora32_v10:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x39\""
 
@@ -72,6 +83,9 @@ firmware-lora32_v21:
 
 firmware-lora32_v21_extled:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
+
+firmware-lora32_v21_tcxo:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DENABLE_TCXO=true\""
 
 firmware-heltec32_v2:
 	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
@@ -91,6 +105,8 @@ firmware-featheresp32:
 firmware-genericesp32:
 	arduino-cli compile --fqbn esp32:esp32:esp32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\""
 
+firmware-rak4630:
+	arduino-cli compile --fqbn rakwireless:nrf52:WisCoreRAK4631Board -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x51\""
 
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
@@ -99,11 +115,11 @@ upload-mega2560:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:mega
 
 upload-tbeam:
-	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:t-beam
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:t-beam
 	@sleep 1
-	rnodeconf /dev/ttyUSB0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.t-beam/RNode_Firmware.ino.bin)
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.t-beam/RNode_Firmware.ino.bin)
 	@sleep 3
-	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
+	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
 upload-lora32_v10:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:ttgo-lora32
@@ -147,6 +163,13 @@ upload-rnode_ng_21:
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
+upload-t3s3:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:esp32s3
+	@sleep 1
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+	@sleep 3
+	python ./Release/esptool/esptool.py --chip esp32s3 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
+
 upload-featheresp32:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:featheresp32
 	@sleep 1
@@ -154,10 +177,14 @@ upload-featheresp32:
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
+upload-rak4630:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn rakwireless:nrf52:WisCoreRAK4631Board
+
+
 
 release: release-all
 
-release-all: console-site spiffs-image release-rnode release-mega2560 release-tbeam release-lora32_v10 release-lora32_v20 release-lora32_v21 release-lora32_v10_extled release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21 release-hashes
+release-all: console-site spiffs-image release-rnode release-tbeam release-tbeam_sx1262 release-lora32_v10 release-lora32_v20 release-lora32_v21 release-lora32_v10_extled release-lora32_v20_extled release-lora32_v21_extled release-lora32_v21_tcxo release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21 release-t3s3 release-hashes
 
 release-hashes:
 	python ./release_hashes.py > ./Release/release.json
@@ -174,6 +201,15 @@ release-tbeam:
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_tbeam.bootloader
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_tbeam.partitions
 	zip --junk-paths ./Release/rnode_firmware_tbeam.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_tbeam.boot_app0 build/rnode_firmware_tbeam.bin build/rnode_firmware_tbeam.bootloader build/rnode_firmware_tbeam.partitions
+	rm -r build
+
+release-tbeam_sx1262:
+	arduino-cli compile --fqbn esp32:esp32:t-beam -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\" \"-DMODEM=0x03\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.*/tools/partitions/boot_app0.bin build/rnode_firmware_tbeam_sx1262.boot_app0
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bin build/rnode_firmware_tbeam_sx1262.bin
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_tbeam_sx1262.bootloader
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_tbeam_sx1262.partitions
+	zip --junk-paths ./Release/rnode_firmware_tbeam_sx1262.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_tbeam_sx1262.boot_app0 build/rnode_firmware_tbeam_sx1262.bin build/rnode_firmware_tbeam_sx1262.bootloader build/rnode_firmware_tbeam_sx1262.partitions
 	rm -r build
 
 release-lora32_v10:
@@ -230,6 +266,15 @@ release-lora32_v21_extled:
 	zip --junk-paths ./Release/rnode_firmware_lora32v21_extled.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_lora32v21.boot_app0 build/rnode_firmware_lora32v21.bin build/rnode_firmware_lora32v21.bootloader build/rnode_firmware_lora32v21.partitions
 	rm -r build
 
+release-lora32_v21_tcxo:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DENABLE_TCXO=true\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.*/tools/partitions/boot_app0.bin build/rnode_firmware_lora32v21_tcxo.boot_app0
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin build/rnode_firmware_lora32v21_tcxo.bin
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_lora32v21_tcxo.bootloader
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_lora32v21_tcxo.partitions
+	zip --junk-paths ./Release/rnode_firmware_lora32v21_tcxo.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_lora32v21_tcxo.boot_app0 build/rnode_firmware_lora32v21_tcxo.bin build/rnode_firmware_lora32v21_tcxo.bootloader build/rnode_firmware_lora32v21_tcxo.partitions
+	rm -r build
+
 release-heltec32_v2:
 	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
 	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.*/tools/partitions/boot_app0.bin build/rnode_firmware_heltec32v2.boot_app0
@@ -266,6 +311,15 @@ release-rnode_ng_21:
 	zip --junk-paths ./Release/rnode_firmware_ng21.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_ng21.boot_app0 build/rnode_firmware_ng21.bin build/rnode_firmware_ng21.bootloader build/rnode_firmware_ng21.partitions
 	rm -r build
 
+release-t3s3:
+	arduino-cli compile --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x42\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.*/tools/partitions/boot_app0.bin build/rnode_firmware_t3s3.boot_app0
+	cp build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin build/rnode_firmware_t3s3.bin
+	cp build/esp32.esp32.esp32s3/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_t3s3.bootloader
+	cp build/esp32.esp32.esp32s3/RNode_Firmware.ino.partitions.bin build/rnode_firmware_t3s3.partitions
+	zip --junk-paths ./Release/rnode_firmware_t3s3.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_t3s3.boot_app0 build/rnode_firmware_t3s3.bin build/rnode_firmware_t3s3.bootloader build/rnode_firmware_t3s3.partitions
+	rm -r build
+
 release-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
 	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.*/tools/partitions/boot_app0.bin build/rnode_firmware_featheresp32.boot_app0
@@ -285,6 +339,6 @@ release-genericesp32:
 	rm -r build
 
 release-mega2560:
-	arduino-cli compile --fqbn arduino:avr:mega -e
+	arduino-cli compile --fqbn arduino:avr:mega -e --build-property "compiler.cpp.extra_flags=\"-DMODEM=0x01\""
 	cp build/arduino.avr.mega/RNode_Firmware.ino.hex Release/rnode_firmware_m2560.hex
 	rm -r build

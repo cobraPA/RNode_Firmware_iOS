@@ -35,6 +35,11 @@
 #elif BOARD_MODEL == BOARD_RNODE_NG_21
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
+#elif BOARD_MODEL == BOARD_RNODE_NG_22
+  #define DISP_RST 21
+  #define DISP_ADDR 0x3C
+  #define SCL_OLED 17
+  #define SDA_OLED 18
 #else
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
@@ -99,6 +104,8 @@ bool display_init() {
       digitalWrite(pin_display_en, LOW);
       delay(50);
       digitalWrite(pin_display_en, HIGH);
+    #elif BOARD_MODEL == BOARD_RNODE_NG_22
+      Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
@@ -459,7 +466,7 @@ void draw_disp_area() {
         if (!device_firmware_ok()) {
           disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
         } else {
-          if (!sx1276_installed) {
+          if (!modem_installed) {
             disp_area.drawBitmap(0, 37, bm_no_radio, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           } else {
             disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);

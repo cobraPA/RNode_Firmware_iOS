@@ -25,6 +25,8 @@
 	#define PRODUCT_T32_20 0xB0
 	#define PRODUCT_T32_21 0xB1
 	#define PRODUCT_H32_V2 0xC0
+	#define MODEL_A1 0xA1
+	#define MODEL_A6 0xA6
 	#define MODEL_A4 0xA4
 	#define MODEL_A9 0xA9
 	#define MODEL_A3 0xA3
@@ -41,6 +43,8 @@
 	#define MODEL_C9 0xC9
 	#define MODEL_E4 0xE4
 	#define MODEL_E9 0xE9
+	#define MODEL_E3 0xE3
+	#define MODEL_E8 0xE8
 	#define MODEL_FE 0xFE
 	#define MODEL_FF 0xFF
 
@@ -48,7 +52,7 @@
 	#define ADDR_MODEL     0x01
 	#define ADDR_HW_REV    0x02
 	#define ADDR_SERIAL    0x03
-	#define ADDR_MADE	   0x07
+	#define ADDR_MADE      0x07
 	#define ADDR_CHKSUM	   0x0B
 	#define ADDR_SIGNATURE 0x1B
 	#define ADDR_INFO_LOCK 0x9B
@@ -70,4 +74,5 @@
 	#define BT_ENABLE_BYTE 0x73
 
 	#define EEPROM_RESERVED 200
+
 #endif

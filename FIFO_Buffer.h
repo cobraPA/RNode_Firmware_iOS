@@ -37,7 +37,7 @@ inline void fifo_flush(FIFOBuffer *f) {
   f->head = f->tail;
 }
 
-#if MCU_VARIANT != MCU_ESP32
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
 	static inline bool fifo_isempty_locked(const FIFOBuffer *f) {
 	  bool result;
 	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -119,7 +119,7 @@ inline void fifo16_flush(FIFOBuffer16 *f) {
   f->head = f->tail;
 }
 
-#if MCU_VARIANT != MCU_ESP32
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
 	static inline bool fifo16_isempty_locked(const FIFOBuffer16 *f) {
 	  bool result;
 	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {

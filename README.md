@@ -113,16 +113,16 @@ You can help support the continued development of open, free and private communi
   ```
 - Ethereum
   ```
-  0x81F7B979fEa6134bA9FD5c701b3501A2e61E897a
+  0xFDabC71AC4c0C78C95aDDDe3B4FA19d6273c5E73
   ```
 - Bitcoin
   ```
-  3CPmacGm34qYvR6XWLVEJmi2aNe3PZqUuq
+  35G9uWVzrpJJibzUwpNUQGQNFzLirhrYAH
   ```
 - Ko-Fi: https://ko-fi.com/markqvist
 
 ## License & Use
-The RNode Firmware is Copyright © 2023 Mark Qvist / [unsigned.io](https://unsigned.io), and is made available under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
+The RNode Firmware is Copyright © 2024 Mark Qvist / [unsigned.io](https://unsigned.io), and is made available under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
 
 You can obtain the source code from [git.unsigned.io](https://git.unsigned.io/markqvist/RNode_Firmware) or [GitHub](https://github.com/markqvist/rnode_firmware).
 
