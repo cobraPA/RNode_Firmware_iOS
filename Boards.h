@@ -42,6 +42,9 @@
   #define BOARD_GENERIC_NRF52 0x50
   #define BOARD_RAK4630       0x51
 
+  // override for local compile
+  #define BOARD_MODEL  BOARD_LORA32_V1_0
+
   #if defined(__AVR_ATmega1284P__)
     #define PLATFORM PLATFORM_AVR
     #define MCU_VARIANT MCU_1284P
@@ -71,6 +74,7 @@
 
   #define HAS_DISPLAY false
   #define HAS_BLUETOOTH false
+  #define HAS_BLE false
   #define HAS_TCXO false
   #define HAS_PMU false
   #define HAS_NP false
@@ -143,6 +147,7 @@
       #define HAS_DISPLAY true
       #define HAS_PMU true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_SD false
       #define HAS_EEPROM true
@@ -178,6 +183,7 @@
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 18;
@@ -194,6 +200,7 @@
     #elif BOARD_MODEL == BOARD_LORA32_V2_0
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 18;
@@ -210,6 +217,7 @@
     #elif BOARD_MODEL == BOARD_LORA32_V2_1
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_PMU true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
