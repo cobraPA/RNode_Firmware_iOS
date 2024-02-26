@@ -705,7 +705,7 @@ void kiss_indicate_bandwidth() {
 	escaped_serial_write(lora_bw>>8);
 	escaped_serial_write(lora_bw);
 	serial_write(FEND);
-  Serial.print('kiss BW ');
+  Serial.print("kiss BW ");
   Serial.println(lora_bw);
 }
 
