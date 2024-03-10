@@ -34,11 +34,11 @@ BLEBas  blebas;
 #define BT_PAIRING_TIMEOUT 35000
 uint32_t bt_pairing_started = 0;
 
-#define BT_DEV_ADDR_LEN 6
-#define BT_DEV_HASH_LEN 16
-uint8_t dev_bt_mac[BT_DEV_ADDR_LEN];
-char bt_da[BT_DEV_ADDR_LEN];
-char bt_dh[BT_DEV_HASH_LEN];
+//#define BT_DEV_ADDR_LEN 6
+//#define BT_DEV_HASH_LEN 16
+//uint8_t dev_bt_mac[BT_DEV_ADDR_LEN];
+//char bt_da[BT_DEV_ADDR_LEN];
+//char bt_dh[BT_DEV_HASH_LEN];
 // moved to config.h, shared with BLE and display
 //char bt_devname[11];
 

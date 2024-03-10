@@ -145,6 +145,7 @@ void setup() {
       eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
     }
     disp_ready = display_init();
+      // ble debug
     Serial.print("disp ready = ");
     Serial.println(disp_ready);
     update_display();
@@ -161,6 +162,7 @@ void setup() {
       bt_init_ran = true;
     #elif HAS_BLE
       // TODO: Implement BLE on ESP32S3 instead of this hack
+      ble_init();
       bt_ready = true;
     #endif
 
@@ -328,13 +330,17 @@ void ISR_VECT receive_callback(int packet_size) {
 
 bool startRadio() {
   update_radio_lock();
-  Serial.print("do radio ");
+      // ble debug
+  //Serial.print("do radio ");
   if (!radio_online && !console_active) {
-    Serial.print(" not-online ");
+      // ble debug
+    //Serial.print(" not-online ");
     if (!radio_locked && hw_ready) {
-      Serial.print("not-locked ");
+      // ble debug
+      //Serial.print("not-locked ");
       if (!LoRa->begin(lora_freq)) {
-      Serial.println(" error ");
+      // ble debug
+      //Serial.println(" error ");
       // The radio could not be started.
         // Indicate this failure over both the
         // serial port and with the onboard LEDs
@@ -343,7 +349,8 @@ bool startRadio() {
         led_indicate_error(0);
         return false;
       } else {
-        Serial.print(" online ");
+      // ble debug
+        //Serial.print(" online ");
 
         radio_online = true;
 
@@ -365,7 +372,8 @@ bool startRadio() {
         // that the radio is now on
         kiss_indicate_radiostate();
         led_indicate_info(3);
-        Serial.println(" started!");
+      // ble debug
+        //Serial.println(" started!");
         return true;
       }
 
@@ -376,14 +384,16 @@ bool startRadio() {
       radio_online = false;
       kiss_indicate_radiostate();
       led_indicate_warning(3);
-      Serial.println(" locked-nostart!");
+      // ble debug
+      //Serial.println(" locked-nostart!");
       return false;
     }
   } else {
     // If radio is already on, we silently
     // ignore the request.
     kiss_indicate_radiostate();
-    Serial.println(" already on");
+      // ble debug
+    //Serial.println(" already on");
     return true;
   }
 }
@@ -394,6 +404,7 @@ void stopRadio() {
 }
 
 void update_radio_lock() {
+      // ble debug
     //static char lock[40];
     //sprintf(lock, "lock chk %d %d %x %d", lora_freq, lora_bw, lora_txp, lora_sf);
     //Serial.println(lock);
@@ -626,8 +637,9 @@ void serialCallback(uint8_t sbyte) {
             lora_freq = freq;
             if (op_mode == MODE_HOST) setFrequency();
             kiss_indicate_frequency();
-            Serial.print("freq ");
-            Serial.println(lora_freq);
+      // ble debug
+            //Serial.print("freq ");
+            //Serial.println(lora_freq);
           }
         }
     } else if (command == CMD_BANDWIDTH) {
@@ -651,8 +663,9 @@ void serialCallback(uint8_t sbyte) {
             lora_bw = bw;
             if (op_mode == MODE_HOST) setBandwidth();
             kiss_indicate_bandwidth();
-            Serial.print("BW ");
-            Serial.println(lora_bw);
+      // ble debug
+            //Serial.print("BW ");
+            //Serial.println(lora_bw);
 
           }
         }
@@ -716,7 +729,8 @@ void serialCallback(uint8_t sbyte) {
       } else if (sbyte == 0x01) {
         startRadio();
         kiss_indicate_radiostate();
-        Serial.println("start radio");
+      // ble debug
+        //Serial.println("start radio");
       }
     } else if (command == CMD_ST_ALOCK) {
       if (sbyte == FESC) {
@@ -937,17 +951,17 @@ void serialCallback(uint8_t sbyte) {
           }
       #endif
     } else if (command == CMD_BT_CTRL) {
-      #if HAS_BLUETOOTH
-        if (sbyte == 0x00) {
-          bt_stop();
-          bt_conf_save(false);
-        } else if (sbyte == 0x01) {
-          bt_start();
-          bt_conf_save(true);
-        } else if (sbyte == 0x02) {
-          bt_enable_pairing();
-        }
-      #endif
+      //#if HAS_BLUETOOTH
+      //  if (sbyte == 0x00) {
+      //    bt_stop();
+      //    bt_conf_save(false);
+      //  } else if (sbyte == 0x01) {
+      //    bt_start();
+      //    bt_conf_save(true);
+      //  } else if (sbyte == 0x02) {
+      //    bt_enable_pairing();
+      //  }
+      //#endif
     } else if (command == CMD_DISP_INT) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
@@ -1099,6 +1113,11 @@ void validate_status() {
       uint8_t F_WDR = 0x01;
   #endif
 
+        // ble debug
+        Serial.print("hw_ready ");
+        Serial.print(hw_ready);
+        Serial.print(" device init done ");
+        Serial.println(device_init_done);
   if (hw_ready || device_init_done) {
     hw_ready = false;
     Serial.write("Error, invalid hardware check state\r\n");
@@ -1129,25 +1148,30 @@ void validate_status() {
   }
 
   if (boot_vector == START_FROM_BOOTLOADER || boot_vector == START_FROM_POWERON) {
-    if (eeprom_lock_set()) {
+    //if (eeprom_lock_set()) {
+    if (1) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
           eeprom_ok = true;
           if (modem_installed) {
             #if PLATFORM == PLATFORM_ESP32
               if (device_init()) {
+                // ble debug
                 Serial.println("hw ready 1");
                 hw_ready = true;
               } else {
                 hw_ready = false;
+                // ble debug
                 Serial.println("hw ! ready 1");
               }
             #else
               hw_ready = true;
+                // ble debug
                 Serial.println("hw ready 2");
             #endif
           } else {
             hw_ready = false;
+            // ble debug
             Serial.println("hw ! ready 3");
             Serial.write("No valid radio module found\r\n");
             #if HAS_DISPLAY
@@ -1162,11 +1186,13 @@ void validate_status() {
             eeprom_conf_load();
             op_mode = MODE_TNC;
             startRadio();
+            // ble debug
             Serial.println("hw ready - start radio");
 
           }
         } else {
           hw_ready = false;
+          // ble debug
           Serial.println("hw ! ready 4");
           #if HAS_DISPLAY
             if (disp_ready) {
@@ -1177,9 +1203,10 @@ void validate_status() {
         }
       } else {
         hw_ready = false;
+        // ble debug
         Serial.println("hw ! ready 5  - override  - TODO");
         
-        //  override eeprom flags
+        //  override eeprom flags - ble debug
         hw_ready = true;
         //
 
@@ -1187,12 +1214,14 @@ void validate_status() {
           if (disp_ready) {
             device_init_done = true;
             update_display();
+          // ble debug
             Serial.println("update display called");
           }
         #endif
       }
     } else {
       hw_ready = false;
+      // ble debug
       Serial.println("hw ! ready 6");
       #if HAS_DISPLAY
         if (disp_ready) {
@@ -1203,6 +1232,7 @@ void validate_status() {
     }
   } else {
     hw_ready = false;
+      // ble debug
     Serial.println("hw ! ready 7 - bad boot vector");
     Serial.write("Error, incorrect boot vector\r\n");
     #if HAS_DISPLAY
@@ -1332,9 +1362,9 @@ void loop() {
     if (pmu_ready) update_pmu();
   #endif
 
-  #if HAS_BLUETOOTH
-    if (!console_active && bt_ready) update_bt();
-  #endif
+  //#if HAS_BLUETOOTH
+  //  if (!console_active && bt_ready) update_bt();
+  //#endif
 }
 
 volatile bool serial_polling = false;
@@ -1364,10 +1394,18 @@ void buffer_serial() {
 
     uint8_t c = 0;
 
-    #if HAS_BLUETOOTH
+    //#if HAS_BLUETOOTH
+    //while (
+    //  c < MAX_CYCLES &&
+    //  ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) 
+    //  || (bt_state == BT_STATE_BLE_CONNECTED && BLE_data_available())
+    //  )
+    //  )
+    //#elif HAS_BLE
+    #if HAS_BLE
     while (
       c < MAX_CYCLES &&
-      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) 
+      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) 
       || (bt_state == BT_STATE_BLE_CONNECTED && BLE_data_available())
       )
       )
@@ -1381,12 +1419,22 @@ void buffer_serial() {
         if (!fifo_isfull_locked(&serialFIFO)) {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
-      #elif HAS_BLUETOOTH
-        if (bt_state == BT_STATE_CONNECTED) {
-          if (!fifo_isfull(&serialFIFO)) {
-            fifo_push(&serialFIFO, SerialBT.read());
-          }
-        } else if (HAS_BLUETOOTH && bt_state == BT_STATE_BLE_CONNECTED) {
+      //#elif HAS_BLUETOOTH
+        //if (bt_state == BT_STATE_CONNECTED) {
+        //  if (!fifo_isfull(&serialFIFO)) {
+        //    fifo_push(&serialFIFO, SerialBT.read());
+        //  }
+        //} else if (HAS_BLUETOOTH && bt_state == BT_STATE_BLE_CONNECTED) {
+        //  if (!fifo_isfull(&serialFIFO)) {
+        //    fifo_push(&serialFIFO, BLERead());
+        //  }        
+        //} else {
+        //  if (!fifo_isfull(&serialFIFO)) {
+        //    fifo_push(&serialFIFO, Serial.read());
+        //  }
+        //}
+      #elif HAS_BLE
+        if (bt_state == BT_STATE_BLE_CONNECTED) {
           if (!fifo_isfull(&serialFIFO)) {
             fifo_push(&serialFIFO, BLERead());
           }        

@@ -70,8 +70,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
       bt_state = BT_STATE_BLE_CONNECTED;
       cable_state = CABLE_STATE_DISCONNECTED;
 
-
-      Serial.println("Connect..");
+      // ble debug
+      //Serial.println("Connect..");
 
     };
 
@@ -79,7 +79,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
       deviceConnected = false;
       bt_state = BT_STATE_ON;
 
-      Serial.println("Disconnect..");
+      // ble debug
+      //Serial.println("Disconnect..");
       delay(500);
       pServer->startAdvertising(); // restart advertising
     }
@@ -164,7 +165,8 @@ bool ble_init() {
 
 // Heltec device returned RNode_5949 for first test device
 
-    Serial.println(bt_devname);
+      // ble debug
+    //Serial.println(bt_devname);
 
   //BLEDevice::deinit(true);
   // init here does not seem to change Bluetooth

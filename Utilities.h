@@ -48,10 +48,14 @@ sx128x *LoRa = &sx128x_modem;
   #include "Display.h"
 #endif
 
-#if HAS_BLUETOOTH == true
-	void kiss_indicate_btpin();
-  #include "Bluetooth.h"
+#if (HAS_BLUETOOTH == true) || (HAS_BLE == true)
+  #include "Bluetooth_common.h"
 #endif
+
+//#if HAS_BLUETOOTH == true
+//	void kiss_indicate_btpin();
+//  #include "Bluetooth.h"
+//#endif
 
 #if HAS_BLE == true
   #include "BLE_RNode.h"
@@ -65,8 +69,11 @@ sx128x *LoRa = &sx128x_modem;
 	#include "Device.h"
 #endif
 #if MCU_VARIANT == MCU_ESP32
+//	#if BOARD_MODEL != BOARD_RNODE_NG_22 && BOARD_MODEL != BOARD_HELTEC_LORA32_V3
 	#if BOARD_MODEL != BOARD_RNODE_NG_22
-	  #include "soc/rtc_wdt.h"
+	  //#include "soc/rtc_wdt.h"
+    //https://github.com/espressif/esp-idf/issues/8855
+    #include "hal/wdt_hal.h"
 	#endif
   #define ISR_VECT IRAM_ATTR
 #else
@@ -197,6 +204,11 @@ uint8_t boot_vector = 0x00;
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 		#endif
+	#elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
