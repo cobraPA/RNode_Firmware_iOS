@@ -36,7 +36,7 @@
   #define BOARD_LORA32_V2_1   0x37
   #define BOARD_LORA32_V1_0   0x39
   #define BOARD_HELTEC32_V2   0x38
-  #define BOARD_HELTEC_LORA32_V3 0x39
+  #define BOARD_HELTEC_LORA32_V3 0x3a
   #define BOARD_RNODE_NG_20   0x40
   #define BOARD_RNODE_NG_21   0x41
   #define BOARD_RNODE_NG_22   0x42
@@ -47,7 +47,8 @@
   // -----------------------------------
   // override for local compile
   //#define BOARD_MODEL  BOARD_LORA32_V1_0
-  #define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
+  //#define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
+  //#define BOARD_MODEL  BOARD_LORA32_V2_0
   // -----------------------------------
 
 
@@ -152,7 +153,8 @@
     #elif BOARD_MODEL == BOARD_TBEAM
       #define HAS_DISPLAY true
       #define HAS_PMU true
-      #define HAS_BLUETOOTH true
+      // TODO - disabled for initial BLE
+      #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_SD false
@@ -263,12 +265,13 @@
       //ESP32-S3 no bluetooth classic
       //#define HAS_BLUETOOTH true
       #define HAS_BLUETOOTH false
-      //#define HAS_BLE true
+      #define HAS_BLE true
       // TODO BLE
-      #define HAS_BLE false
+      //#define HAS_BLE false
       // Cannot run wifi and BLE at same time?
-      #define HAS_CONSOLE false
+      #define HAS_CONSOLE true
       #define HAS_EEPROM true
+      // Only one LED on pin 35
       #if defined(EXTERNAL_LEDS)
         const int pin_led_rx = 35;
         const int pin_led_tx = 2;
@@ -279,10 +282,9 @@
 
       #define MODEM SX1262
       #define HAS_TCXO true
+      const int pin_tcxo_enable = -1;
       #define HAS_BUSY true
       #define DIO2_AS_RF_SWITCH true
-      const int pin_dio = 33;
-      const int pin_tcxo_enable = -1;
 
       // following pins are for the sx1262
       const int pin_cs = 8;

@@ -34,7 +34,6 @@
   #define SDA_OLED 4
 #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
   #define DISP_RST 21
-  //#define DISP_RST -1
   #define DISP_ADDR 0x3C
   #define SCL_OLED 18
   #define SDA_OLED 17
@@ -115,13 +114,15 @@ bool display_init() {
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
-      Serial.println("display - 1 ");
+      //Serial.println("display - 1 ");
       // vext
       pinMode(Vext, OUTPUT);
       //digitalWrite(36, LOW);
       digitalWrite(Vext, LOW);
-      delay(500);
-      Serial.println("display - 2 ");
+      delay(50);
+      digitalWrite(Vext, HIGH);
+      delay(50);
+      ///Serial.println("display - 2 ");
       //Serial.print("vext ");
       //Serial.println(Vext);
       int pin_display_en = 21;
@@ -135,8 +136,8 @@ bool display_init() {
       Wire.begin(SDA_OLED, SCL_OLED);
       // ble debug
       //Serial.println("Setup display pins LORA32 V3");
-      Serial.println("vext ");
-      Serial.println(Vext);
+      //Serial.println("vext ");
+      //Serial.println(Vext);
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
       int pin_display_en = 16;
       digitalWrite(pin_display_en, LOW);
@@ -180,7 +181,9 @@ bool display_init() {
         display.setRotation(1);
       #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
         disp_mode = DISP_MODE_PORTRAIT;
+        // Antenna conx up
         display.setRotation(1);
+        // USB-C up
         //display.setRotation(3);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
@@ -421,6 +424,10 @@ void update_stat_area() {
 // BLE - node name on page 3
 const uint8_t pages = 4;
 uint8_t disp_page = START_PAGE;
+int bt_cache_pair = false;
+static const char ble_paired[6] = "+PAIR";
+static const char ble_pairing[8] = "Pairing";
+
 void draw_disp_area() {
   if (!device_init_done || firmware_update_mode) {
     uint8_t p_by = 37;
@@ -584,6 +591,18 @@ void draw_disp_area() {
             disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_BLACK);
             disp_area.setCursor(3, 37+8);
             disp_area.print(bt_devname);
+            disp_area.setCursor(3, 37+16);
+            if (bt_state == BT_STATE_PAIRING) {
+              disp_area.print(ble_pairing);
+            }
+            else if (bt_state == BT_STATE_BLE_CONNECTED || bt_cache_pair == true) {
+              bt_cache_pair = true;
+              disp_area.print(ble_paired);
+            }
+
+          }
+          if (bt_state == BT_STATE_BLE_CONNECTED && bt_cache_pair == false) {
+              bt_cache_pair = true;
           }
         }
       }
@@ -595,7 +614,7 @@ void draw_disp_area() {
 
 void update_disp_area() {
   // ble debug
-  Serial.println("...update disp area...");
+  //Serial.println("...update disp area...");
   draw_disp_area();
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   if (disp_mode == DISP_MODE_LANDSCAPE) {

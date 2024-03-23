@@ -163,6 +163,7 @@ void setup() {
     #elif HAS_BLE
       // TODO: Implement BLE on ESP32S3 instead of this hack
       ble_init();
+      Serial.println("BLE init ran");
       bt_ready = true;
     #endif
 
@@ -331,16 +332,16 @@ void ISR_VECT receive_callback(int packet_size) {
 bool startRadio() {
   update_radio_lock();
       // ble debug
-  //Serial.print("do radio ");
+  Serial.print("do radio ");
   if (!radio_online && !console_active) {
       // ble debug
     //Serial.print(" not-online ");
     if (!radio_locked && hw_ready) {
       // ble debug
-      //Serial.print("not-locked ");
+      Serial.print("not-locked ");
       if (!LoRa->begin(lora_freq)) {
       // ble debug
-      //Serial.println(" error ");
+      Serial.println(" error ");
       // The radio could not be started.
         // Indicate this failure over both the
         // serial port and with the onboard LEDs
@@ -350,7 +351,7 @@ bool startRadio() {
         return false;
       } else {
       // ble debug
-        //Serial.print(" online ");
+        Serial.print(" online ");
 
         radio_online = true;
 
@@ -373,7 +374,7 @@ bool startRadio() {
         kiss_indicate_radiostate();
         led_indicate_info(3);
       // ble debug
-        //Serial.println(" started!");
+        Serial.println(" started!");
         return true;
       }
 
@@ -638,8 +639,8 @@ void serialCallback(uint8_t sbyte) {
             if (op_mode == MODE_HOST) setFrequency();
             kiss_indicate_frequency();
       // ble debug
-            //Serial.print("freq ");
-            //Serial.println(lora_freq);
+            Serial.print("freq ");
+            Serial.println(lora_freq);
           }
         }
     } else if (command == CMD_BANDWIDTH) {
@@ -730,7 +731,7 @@ void serialCallback(uint8_t sbyte) {
         startRadio();
         kiss_indicate_radiostate();
       // ble debug
-        //Serial.println("start radio");
+        Serial.println("start radio");
       }
     } else if (command == CMD_ST_ALOCK) {
       if (sbyte == FESC) {
@@ -1151,7 +1152,9 @@ void validate_status() {
     //if (eeprom_lock_set()) {
     if (1) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
+        Serial.println("eeprom checks valid");
         if (eeprom_checksum_valid()) {
+          Serial.println("eeprom checksum valid");
           eeprom_ok = true;
           if (modem_installed) {
             #if PLATFORM == PLATFORM_ESP32
@@ -1162,7 +1165,19 @@ void validate_status() {
               } else {
                 hw_ready = false;
                 // ble debug
-                Serial.println("hw ! ready 1");
+                Serial.println("hw ! ready 1 -- and override hw_ready (tbeam)");
+                hw_ready = true;
+                
+                // TODO - fix override
+                fw_signature_validated = true;
+                    // TODO - tbeam override
+                      #if HAS_DISPLAY
+                      if (disp_ready) {
+                        device_init_done = true;
+                        update_display();
+                      }
+                      #endif
+
               }
             #else
               hw_ready = true;
@@ -1365,6 +1380,13 @@ void loop() {
   //#if HAS_BLUETOOTH
   //  if (!console_active && bt_ready) update_bt();
   //#endif
+
+  #if MCU_VARIANT == MCU_ESP32 && HAS_BLE
+    if (bt_state == BT_STATE_BLE_DISCONNECTED) {
+          stopRadio();
+          bt_state = BT_STATE_ON;
+    }
+  #endif
 }
 
 volatile bool serial_polling = false;

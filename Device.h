@@ -153,6 +153,9 @@ bool device_init() {
     mbedtls_md_starts(&ctx);
     #if HAS_BLUETOOTH == true
       mbedtls_md_update(&ctx, dev_bt_mac, BT_DEV_ADDR_LEN);
+    #elif HAS_BLE == true
+      //iOS also
+      mbedtls_md_update(&ctx, dev_bt_mac, BT_DEV_ADDR_LEN);
     #else
       // TODO: Get from BLE stack instead
       // mbedtls_md_update(&ctx, dev_bt_mac, BT_DEV_ADDR_LEN);

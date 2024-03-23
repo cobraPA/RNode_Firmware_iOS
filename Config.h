@@ -34,8 +34,9 @@
 	#define BT_STATE_ON        0x01
 	#define BT_STATE_PAIRING   0x02
 	#define BT_STATE_CONNECTED 0x03
-  #define BT_STATE_BLE_CONNECTED 0x04
-	uint8_t bt_state = BT_STATE_NA;
+  #define BT_STATE_BLE_CONNECTED    0x04
+	#define BT_STATE_BLE_DISCONNECTED 0x05
+  uint8_t bt_state = BT_STATE_NA;
   // for display and sharing with BLE
   char bt_devname[11];
 	uint32_t bt_ssp_pin = 0;

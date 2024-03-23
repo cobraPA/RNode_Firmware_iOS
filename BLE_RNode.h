@@ -11,7 +11,7 @@ From
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
-#include <BLEAdvertising.h>
+//#include <BLEAdvertising.h>
 // commented usage of 2902 for now...
 //#include <BLE2902.h>
 
@@ -71,16 +71,18 @@ class MyServerCallbacks: public BLEServerCallbacks {
       cable_state = CABLE_STATE_DISCONNECTED;
 
       // ble debug
-      //Serial.println("Connect..");
+      Serial.println("Connect..");
 
     };
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
-      bt_state = BT_STATE_ON;
-
+      //bt_state = BT_STATE_ON;
+      bt_state = BT_STATE_BLE_DISCONNECTED;
+      //stopRadio();
+      // not available here
       // ble debug
-      //Serial.println("Disconnect..");
+      Serial.println("Disconnect..");
       delay(500);
       pServer->startAdvertising(); // restart advertising
     }
@@ -117,10 +119,66 @@ class MyCallbacks: public BLECharacteristicCallbacks {
 };
 
 
+class MySecurity : public BLESecurityCallbacks {
+
+	uint32_t onPassKeyRequest(){
+    ESP_LOGI(LOG_TAG, "PassKeyRequest");
+    uint32_t pass_key = 112233;
+    Serial.println("Key request ");
+    Serial.println(pass_key);
+		return pass_key;
+	}
+	void onPassKeyNotify(uint32_t pass_key){
+    ESP_LOGI(LOG_TAG, "The passkey Notify number:%d", pass_key);
+    Serial.print("Key notify ");
+    Serial.print(pass_key);
+    Serial.print("  state ");
+    Serial.println(bt_state);
+    //bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0
+    // Enable display of passkey on RNode
+    bt_state = BT_STATE_PAIRING;
+    bt_ssp_pin = pass_key;
+	}
+	bool onConfirmPIN(uint32_t pass_key){
+    ESP_LOGI(LOG_TAG, "The passkey YES/NO number:%d", pass_key);
+    Serial.print("confirm pin ");
+    Serial.println(pass_key);
+		return true;
+	}
+	bool onSecurityRequest(){
+    ESP_LOGI(LOG_TAG, "SecurityRequest");
+    Serial.println("Sec request");
+		return true;
+	}
+
+	void onAuthenticationComplete(esp_ble_auth_cmpl_t cmpl){
+		ESP_LOGI(LOG_TAG, "Starting BLE work!");
+    //esp_ble_gap_update_whitelist(true, cmpl.bd_addr);
+    esp_ble_gap_update_whitelist(true, cmpl.bd_addr, BLE_WL_ADDR_TYPE_RANDOM);//BLE_ADDR_TYPE_PUBLIC
+    Serial.println("Auth compl!");
+    bt_state = BT_STATE_BLE_CONNECTED;
+    // display checks this as flag, leave it in place?
+    // no, indicates pair in progress. we are done.
+    bt_ssp_pin = 0;
+
+	}
+};
+/*
+C:\Users\cobra\Documents\Arduino\RNode_Firmware\BLE_RNode.h:140:52: error: too few arguments to function 'esp_err_t esp_ble_gap_update_whitelist(bool, uint8_t*, esp_ble_wl_addr_type_t)'
+     esp_ble_gap_update_whitelist(true, cmpl.bd_addr);
+
+In file included from C:\Users\cobra\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14\libraries\BLE\src/BLEDevice.h:12,
+                 from C:\Users\cobra\Documents\Arduino\RNode_Firmware\BLE_RNode.h:11,
+                 from C:\Users\cobra\Documents\Arduino\RNode_Firmware\Utilities.h:61,
+                 from C:\Users\cobra\Documents\Arduino\RNode_Firmware\RNode_Firmware.ino:18:
+C:\Users\cobra\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.14/tools/sdk/esp32s3/include/bt/host/bluedroid/api/include/api/esp_gap_ble_api.h:1573:11: note: declared here
+ esp_err_t esp_ble_gap_update_whitelist(bool add_remove, esp_bd_addr_t remote_bda, esp_ble_wl_addr_type_t wl_addr_type);
+*/
+
 
 bool ble_init() {
   //Serial.begin(115200);
-  //Serial.println("Starting BLE work!");
+  Serial.println("Starting BLE work!");
   // move to global - config.h
   //static char bt_devname[15];
 
@@ -162,11 +220,12 @@ bool ble_init() {
 // known name
   BLEDevice::deinit();
   BLEDevice::init(bt_devname);
+  BLEDevice::setSecurityCallbacks(new MySecurity());
 
 // Heltec device returned RNode_5949 for first test device
 
       // ble debug
-    //Serial.println(bt_devname);
+    Serial.println(bt_devname);
 
   //BLEDevice::deinit(true);
   // init here does not seem to change Bluetooth
@@ -174,11 +233,9 @@ bool ble_init() {
   //BLEDevice::init(bt_devname);
 
 
-  /*
-   * Here we have implemented simplest security. This kind security does not provide authentication
-   */
   // Remove for NimBLE
-  BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+  ////BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+  BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
 
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -198,6 +255,12 @@ bool ble_init() {
                                          NIMBLE_PROPERTY::WRITE_ENC */
                                        );
 
+  //pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+  pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_WRITE_ENC_MITM);
+  //pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM | ESP_GATT_PERM_WRITE_ENC_MITM);
+  // reports
+  // E (13439) BT_GATT: gatts_write_attr_perm_check - GATT_INSUF_AUTHENTICATION: MITM required
+ 
   pCharacteristicRx->setCallbacks(new MyCallbacks());
 
   //BLECharacteristic *pCharacteristicTx
@@ -209,13 +272,16 @@ bool ble_init() {
                                        );
   // Not required?  Used in BLE UART sample
   //pCharacteristicTx->addDescriptor(new BLE2902());
+  pCharacteristicTx->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM);
 
   // sample write
 //  pCharacteristicTx->setValue("Hello World says Neil");
 //  pCharacteristicTx->notify();
 
   pService->start();
-  BLEAdvertising *pAdvertising = pServer->getAdvertising();
+  //BLEAdvertising *pAdvertising = pServer->getAdvertising();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+
   // from https://randomnerdtutorials.com/esp32-bluetooth-low-energy-ble-arduino-ide/
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
@@ -224,10 +290,25 @@ bool ble_init() {
   // name on iOS)
   //pAdvertising->setShortName(bt_devname);
   //pAdvertising->setAdvertisementData(*advData);
+  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
+  ////pAdvertising->setMinPreferred(0x12);
+  BLEDevice::startAdvertising();
+  //pAdvertising->start();
 
-  pAdvertising->start();
+  BLESecurity *pSecurity = new BLESecurity();
+  //pSecurity->setStaticPIN(112233); 
+  //pSecurity->set
+  //pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_ONLY);
+  ////pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_BOND);
+  // see above for MITM error
+  pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_MITM_BOND);
 //  Serial.println("Characteristic defined! Now you can read it in your phone!");
-
+  ////pSecurity->setCapability(ESP_IO_CAP_IO);  // review key on phone (confirm pin)
+  //pSecurity->setCapability(ESP_IO_CAP_NONE); // can't use, will pair but we set MITM on characteristics, so they will fail (read/write)
+  pSecurity->setCapability(ESP_IO_CAP_OUT);  // type in pin on phone (key notify)
+  //pSecurity->setCapability(ESP_IO_CAP_KBDISP);  // review on phone (confirm pin)
+  pSecurity->setRespEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
+  pSecurity->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
 
   return true;
 }

@@ -69,11 +69,11 @@ sx128x *LoRa = &sx128x_modem;
 	#include "Device.h"
 #endif
 #if MCU_VARIANT == MCU_ESP32
-//	#if BOARD_MODEL != BOARD_RNODE_NG_22 && BOARD_MODEL != BOARD_HELTEC_LORA32_V3
-	#if BOARD_MODEL != BOARD_RNODE_NG_22
-	  //#include "soc/rtc_wdt.h"
+  #if BOARD_MODEL == BOARD_HELTEC_LORA32_V3
     //https://github.com/espressif/esp-idf/issues/8855
     #include "hal/wdt_hal.h"
+  #elif BOARD_MODEL != BOARD_RNODE_NG_22
+	  #include "soc/rtc_wdt.h"
 	#endif
   #define ISR_VECT IRAM_ATTR
 #else
@@ -1354,6 +1354,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
 	if (model == MODEL_FF || model == MODEL_FE) {
+  //#elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+  //if (1) {
 	#else
 	if (false) {
 	#endif
