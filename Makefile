@@ -96,6 +96,10 @@ firmware-heltec32_v2_extled:
 firmware-heltec32_v3:
 	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V3 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3a\""
 
+# Heltec-esp32:esp32:heltec_capsule_sensor_V3
+firmware-heltec_capsule_v3:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V3 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3b\" \"-DEXTERNAL_LEDS=true\""
+
 firmware-rnode_ng_20:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
 
@@ -158,6 +162,10 @@ upload-heltec32_v3:
 	rnodeconf COM3 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.heltec_wifi_lora_32_V3/RNode_Firmware.ino.bin)
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32-s3 --port COM3 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
+
+upload--heltec_capsule_v3:
+	arduino-cli upload -p 192.168.4.1 --fqbn Heltec-esp32:esp32:heltec_capsule_sensor_V3 --upload-field password=123456
+#	arduino-cli upload -p "192.168.4.1" --fqbn esp32:esp32:heltec_wifi_lora_32_V3
 
 upload-rnode_ng_20:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:ttgo-lora32

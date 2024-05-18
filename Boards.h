@@ -37,6 +37,8 @@
   #define BOARD_LORA32_V1_0   0x39
   #define BOARD_HELTEC32_V2   0x38
   #define BOARD_HELTEC_LORA32_V3 0x3a
+  #define BOARD_HELTEC_CAPSULE_V3 0x3b
+  #define BOARD_HELTEC_WIRELESS_PAPER_1_1 0x3c
   #define BOARD_RNODE_NG_20   0x40
   #define BOARD_RNODE_NG_21   0x41
   #define BOARD_RNODE_NG_22   0x42
@@ -295,6 +297,38 @@
       const int pin_miso = 11;
       const int pin_sclk = 9;
 
+
+    #elif BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3
+      #define IS_ESP32S3 true
+      #define HAS_DISPLAY false
+      //ESP32-S3 no bluetooth classic
+      //#define HAS_BLUETOOTH true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_CONSOLE false
+      #define HAS_EEPROM true
+      #if defined(EXTERNAL_LEDS)
+        const int pin_led_rx = 33;
+        const int pin_led_tx = 34;
+      #else
+        const int pin_led_rx = 35;
+        const int pin_led_tx = 35;
+      #endif
+
+      #define MODEM SX1262
+      #define HAS_TCXO true
+      const int pin_tcxo_enable = -1;
+      #define HAS_BUSY true
+      #define DIO2_AS_RF_SWITCH true
+
+      // following pins are for the sx1262
+      const int pin_cs = 8;
+      const int pin_busy = 13;
+      const int pin_dio = 14;
+      const int pin_reset = 12;
+      const int pin_mosi = 10;
+      const int pin_miso = 11;
+      const int pin_sclk = 9;
 
 
     #elif BOARD_MODEL == BOARD_RNODE_NG_20

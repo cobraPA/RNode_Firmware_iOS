@@ -235,7 +235,11 @@ bool ble_init() {
 
   // Remove for NimBLE
   ////BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+  #if HAS_DISPLAY
   BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
+  #else
+  BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+  #endif
 
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -256,7 +260,11 @@ bool ble_init() {
                                        );
 
   //pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+  #if HAS_DISPLAY
   pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_WRITE_ENC_MITM);
+  #else
+  pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_WRITE_ENCRYPTED);
+  #endif
   //pCharacteristicRx->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM | ESP_GATT_PERM_WRITE_ENC_MITM);
   // reports
   // E (13439) BT_GATT: gatts_write_attr_perm_check - GATT_INSUF_AUTHENTICATION: MITM required
@@ -272,7 +280,12 @@ bool ble_init() {
                                        );
   // Not required?  Used in BLE UART sample
   //pCharacteristicTx->addDescriptor(new BLE2902());
+  #if HAS_DISPLAY
   pCharacteristicTx->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM);
+  #else
+  pCharacteristicTx->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED);
+  #endif
+
 
   // sample write
 //  pCharacteristicTx->setValue("Hello World says Neil");
@@ -296,6 +309,7 @@ bool ble_init() {
   //pAdvertising->start();
 
   BLESecurity *pSecurity = new BLESecurity();
+  #if HAS_DISPLAY
   //pSecurity->setStaticPIN(112233); 
   //pSecurity->set
   //pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_ONLY);
@@ -307,6 +321,13 @@ bool ble_init() {
   //pSecurity->setCapability(ESP_IO_CAP_NONE); // can't use, will pair but we set MITM on characteristics, so they will fail (read/write)
   pSecurity->setCapability(ESP_IO_CAP_OUT);  // type in pin on phone (key notify)
   //pSecurity->setCapability(ESP_IO_CAP_KBDISP);  // review on phone (confirm pin)
+
+  #else  // no display
+  pSecurity->setStaticPIN(123456); 
+  pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_BOND);
+  pSecurity->setCapability(ESP_IO_CAP_KBDISP);  // review on phone (confirm pin)
+  
+  #endif
   pSecurity->setRespEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
   pSecurity->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
 
