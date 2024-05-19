@@ -331,6 +331,40 @@
       const int pin_sclk = 9;
 
 
+    #elif BOARD_MODEL == BOARD_HELTEC_WIRELESS_PAPER_1_1
+      #define IS_ESP32S3 true
+      // has EInk rather than OLED - todo
+      #define HAS_DISPLAY false
+      //ESP32-S3 no bluetooth classic
+      //#define HAS_BLUETOOTH true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_CONSOLE true
+      #define HAS_EEPROM true
+      #if defined(EXTERNAL_LEDS)
+        const int pin_led_rx = 18;
+        const int pin_led_tx = 35;  // Not connected
+      #else
+        const int pin_led_rx = 35;
+        const int pin_led_tx = 35;
+      #endif
+
+      #define MODEM SX1262
+      #define HAS_TCXO true
+      const int pin_tcxo_enable = -1;
+      #define HAS_BUSY true
+      #define DIO2_AS_RF_SWITCH true
+
+      // following pins are for the sx1262
+      const int pin_cs = 8;
+      const int pin_busy = 13;
+      const int pin_dio = 14;
+      const int pin_reset = 12;
+      const int pin_mosi = 10;
+      const int pin_miso = 11;
+      const int pin_sclk = 9;
+
+
     #elif BOARD_MODEL == BOARD_RNODE_NG_20
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true

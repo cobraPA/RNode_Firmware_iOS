@@ -69,7 +69,7 @@ sx128x *LoRa = &sx128x_modem;
 	#include "Device.h"
 #endif
 #if MCU_VARIANT == MCU_ESP32
-  #if BOARD_MODEL == BOARD_HELTEC_LORA32_V3 || BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3
+  #if BOARD_MODEL == BOARD_HELTEC_LORA32_V3 || BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3 || BOARD_HELTEC_WIRELESS_PAPER_1_1
     //https://github.com/espressif/esp-idf/issues/8855
     #include "hal/wdt_hal.h"
   #elif BOARD_MODEL != BOARD_RNODE_NG_22
@@ -210,6 +210,11 @@ uint8_t boot_vector = 0x00;
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 	#elif BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3
+			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+	#elif BOARD_MODEL == BOARD_HELTEC_WIRELESS_PAPER_1_1
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
