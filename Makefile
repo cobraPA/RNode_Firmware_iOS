@@ -166,7 +166,7 @@ upload-heltec32_v3:
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32-s3 --port COM3 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
-upload--heltec_capsule_v3:
+upload-heltec_capsule_v3:
 # special wifi upload method - no serial port
 	arduino-cli upload -p 192.168.4.1 --fqbn Heltec-esp32:esp32:heltec_capsule_sensor_V3 --upload-field password=123456
 #	arduino-cli upload -p "192.168.4.1" --fqbn esp32:esp32:heltec_wifi_lora_32_V3
