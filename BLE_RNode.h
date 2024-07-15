@@ -90,7 +90,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
 class MyCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
-      std::string rxValue = pCharacteristic->getValue();
+      /*std::string*/ String rxValue = pCharacteristic->getValue();
 
       for (int i = 0; i < rxValue.length(); i++)
           if (!fifo_isfull(&BLE_FIFO)) {

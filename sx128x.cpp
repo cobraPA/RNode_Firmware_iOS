@@ -4,8 +4,14 @@
 // Modifications and additions copyright 2023 by Mark Qvist
 // Obviously still under the MIT license.
 
-#include "sx128x.h"
 #include "Boards.h"
+
+//#if MODEM == SX1280
+//#if 0
+//#include "sx127x.h"
+
+#include "sx128x.h"
+//#include "Boards.h"
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
@@ -30,9 +36,12 @@
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
-  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
-    #include "soc/rtc_wdt.h"
-  #endif
+//  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
+//    #include "soc/rtc_wdt.h"
+//  #endif
+
+  //https://github.com/espressif/esp-idf/issues/8855
+  #include "hal/wdt_hal.h"
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
@@ -879,3 +888,5 @@ void ISR_VECT sx128x::onDio0Rise()
 }
 
 sx128x sx128x_modem;
+
+///#endif

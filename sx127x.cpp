@@ -6,13 +6,16 @@
 
 #include "Boards.h"
 
-#if MODEM == SX1276
+#if MODEM == SX1276 || MODEM == SX1278
 #include "sx127x.h"
 
 #if MCU_VARIANT == MCU_ESP32
-  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
-    #include "soc/rtc_wdt.h"
-  #endif
+//  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
+//    #include "soc/rtc_wdt.h"
+//  #else
+    //https://github.com/espressif/esp-idf/issues/8855
+    #include "hal/wdt_hal.h"
+//  #endif
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
