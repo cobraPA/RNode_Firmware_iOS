@@ -113,7 +113,7 @@ sx128x::sx128x() :
   _crcMode(0),
   _fifo_tx_addr_ptr(0),
   _fifo_rx_addr_ptr(0),
-  _packet({0}),
+  _packet{0},
   _rxPacketLength(0),
   _preinit_done(false),
   _onReceive(NULL)
@@ -813,6 +813,7 @@ void sx128x::disableCrc()
 byte sx128x::random()
 {
     // todo: implement
+    return 0;
 }
 
 void sx128x::setPins(int ss, int reset, int dio0, int busy, int rxen, int txen)

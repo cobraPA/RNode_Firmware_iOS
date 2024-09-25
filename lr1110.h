@@ -4,8 +4,11 @@
 // Modifications and additions copyright 2023 by Mark Qvist
 // Obviously still under the MIT license.
 
-#ifndef SX126X_H
-#define SX126X_H
+// LR1110 Modifications and additions copyright 2024 by Kevin Brosius
+// MIT license.
+
+#ifndef LR1110_H
+#define LR1110_H
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -23,9 +26,9 @@
 
 #define RSSI_OFFSET 157
 
-class sx126x : public Stream {
+class lr11xx : public Stream {
 public:
-  sx126x();
+  lr11xx();
 
   int begin(long frequency);
   void end();
@@ -48,6 +51,7 @@ public:
 
   // from Stream
   virtual int available();
+  virtual int available(uint8_t *size, uint8_t *rxbufstart);
   virtual int read();
   virtual int peek();
   virtual void flush();
@@ -92,7 +96,7 @@ public:
 
   byte random();
 
-  void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN, int busy = LORA_DEFAULT_BUSY_PIN, int rxen = LORA_DEFAULT_RXEN_PIN);
+  void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN, int busy = LORA_DEFAULT_BUSY_PIN /*, int rxen = LORA_DEFAULT_RXEN_PIN */);
   void setSPIFrequency(uint32_t frequency);
 
   void dumpRegisters(Stream& out);
@@ -106,7 +110,19 @@ private:
   uint8_t readRegister(uint16_t address);
   void writeRegister(uint16_t address, uint8_t value);
   uint8_t singleTransfer(uint8_t opcode, uint16_t address, uint8_t value);
+uint16_t cmdTransfer(const char *prt, uint8_t *cmd);
+uint16_t cmdTransfer(const char *prt, uint8_t *cmd, bool );
 uint16_t A32Transfer(uint16_t opcode, uint16_t address, uint16_t value);
+void getErrors(void);
+int decode_stat(uint8_t stat);
+int decode_stat(const char *prt,uint8_t stat1,uint8_t stat2,uint8_t print_it);
+int decode_stat(uint8_t stat, uint8_t stat2);
+void getErrors2(void);
+void doSetup(void);
+//void dioStat(void);
+void dioStatInternal(uint8_t *stat1, uint8_t *int2, uint8_t *int3, uint8_t *int4);
+void dioStat(uint8_t *stat1, uint8_t *int2, uint8_t *int3, uint8_t *int4);
+uint8_t dumpRx(void);
 
   static void onDio0Rise();
 
@@ -114,7 +130,7 @@ uint16_t A32Transfer(uint16_t opcode, uint16_t address, uint16_t value);
   void optimizeModemSensitivity();
 
   void reset(void);
-  void calibrate(void);
+  void calibrate(uint8_t);
   void calibrate_image(long frequency);
 
 private:
@@ -142,6 +158,6 @@ private:
   void (*_onReceive)(int);
 };
 
-extern sx126x sx126x_modem;
+extern lr11xx lr11xx_modem;
 
 #endif

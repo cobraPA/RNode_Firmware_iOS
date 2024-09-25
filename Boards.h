@@ -44,13 +44,17 @@
   #define BOARD_RNODE_NG_22   0x42
   #define BOARD_GENERIC_NRF52 0x50
   #define BOARD_RAK4630       0x51
-
+  #define BOARD_WIO_TRACK_1110 0x52
+  #define BOARD_WIO_T1000E    0x53
 
   // -----------------------------------
   // override for local compile
   //#define BOARD_MODEL  BOARD_LORA32_V1_0
   //#define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
   //#define BOARD_MODEL  BOARD_LORA32_V2_0
+
+  //#define BOARD_MODEL  BOARD_WIO_TRACK_1110
+  #define BOARD_MODEL  BOARD_WIO_T1000E
   // -----------------------------------
 
 
@@ -76,6 +80,8 @@
       #define MODEM SX1262
     #elif BOARD_MODEL == BOARD_GENERIC_NRF52
       #define MODEM SX1262
+    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110 || BOARD_MODEL == BOARD_WIO_T1000E
+      #define MODEM LR1110
     #else
       #define MODEM SX1276
     #endif
@@ -84,7 +90,7 @@
   #define HAS_DISPLAY false
   #define HAS_BLUETOOTH false
   #define HAS_BLE false
-  #define HAS_TCXO false
+  //#define HAS_TCXO false
   #define HAS_PMU false
   #define HAS_NP false
   #define HAS_EEPROM false
@@ -491,6 +497,116 @@
       const int pin_led_rx = LED_BLUE;
       const int pin_led_tx = LED_GREEN;
       const int pin_tcxo_enable = -1;
+
+    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
+      //#define HAS_EEPROM true
+      #define HAS_EEPROM false
+      #define HAS_DISPLAY false
+      #define HAS_BLUETOOTH true
+      #define HAS_BLE false
+      #define HAS_CONSOLE false
+      #define HAS_PMU false
+      #define HAS_NP false
+      #define HAS_SD false
+      // has but internally configured on LR1110
+      #define HAS_TCXO false
+      // todo
+      #define HAS_RF_SWITCH_RX_TX true
+      #define HAS_BUSY true
+      #define CONFIG_UART_BUFFER_SIZE 6144
+      #define CONFIG_QUEUE_SIZE 6144
+      #define CONFIG_QUEUE_MAX_LENGTH 200
+      // internal 1M onboard 4M
+      #define EEPROM_SIZE 1024
+      #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+
+      // following pins are for the LR1110 (comp ? sx1262)
+      // LR1110 controls rxen, todo
+
+      const int pin_rxen = -1;  //N/A
+
+  //Arduino15\packages\Seeeduino\hardware\nrf52\1.1.8\libraries\LBM_WM1110\src\internal\Wm1110Hardware.hpp
+  // IRQ shows as PIN_LR1110_IRQ
+
+      // Wio tracker dev
+      const int pin_reset = 32+10;
+      const int pin_cs = 32+12;
+      const int pin_sclk = 32+13;
+      const int pin_mosi = 32+14;
+      const int pin_miso = 32+15;
+      const int pin_busy = 32+11;
+      // variant.h - Wio
+      //#define PIN_LR1110_IRQ          (2)             // WM1110 LR_DIO9
+      const int pin_dio = 2;
+      // Wio Tracker dev
+      const int pin_led_rx = 6;
+      const int pin_led_tx = 48;  //N/A
+
+      const int pin_tcxo_enable = -1;
+
+    #elif BOARD_MODEL == BOARD_WIO_T1000E
+      //#define HAS_EEPROM true
+      #define HAS_EEPROM false
+      #define HAS_DISPLAY false
+      #define HAS_BLUETOOTH true
+      #define HAS_BLE false
+      #define HAS_CONSOLE false
+      #define HAS_PMU false
+      #define HAS_NP false
+      #define HAS_SD false
+      // has but internally configured on LR1110
+      #define HAS_TCXO false
+      // todo
+      #define HAS_RF_SWITCH_RX_TX true
+      #define HAS_BUSY true
+      #define CONFIG_UART_BUFFER_SIZE 6144
+      #define CONFIG_QUEUE_SIZE 6144
+      #define CONFIG_QUEUE_MAX_LENGTH 200
+      // internal 1M onboard 4M
+      #define EEPROM_SIZE 1024
+      #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+
+      // following pins are for the LR1110 (comp ? sx1262)
+      // LR1110 controls rxen, todo
+
+      const int pin_rxen = -1;  //N/A
+
+  //Arduino15\packages\Seeeduino\hardware\nrf52\1.1.8\libraries\LBM_WM1110\src\internal\Wm1110Hardware.hpp
+  // IRQ shows as PIN_LR1110_IRQ
+
+      // Wio tracker dev
+//      const int pin_reset = 32+10;
+//      const int pin_cs = 32+12;
+//      const int pin_sclk = 32+13;
+//      const int pin_mosi = 32+14;
+//      const int pin_miso = 32+15;
+//      const int pin_busy = 32+11;
+
+      // t1000-e
+      // https://github.com/meshtastic/firmware/pull/4376/files
+      const int pin_reset = 32+10;
+      const int pin_cs = 0+12;
+      const int pin_sclk = 0+11;
+      const int pin_mosi = 32+9;
+      const int pin_miso = 32+8;
+      const int pin_busy = 0+7;
+      
+      // variant.h - Wio
+      //#define PIN_LR1110_IRQ          (2)             // WM1110 LR_DIO9
+      //const int pin_dio = 2;
+      //T1000-E
+      const int pin_dio = 32+1;
+      // Wio Tracker dev
+      //const int pin_led_rx = 6;
+      //const int pin_led_tx = 48;  //N/A
+
+      // T1000-E
+      const int pin_led_tx = -1;  //N/A
+      // T1000-E single LED (Mesht)
+      const int pin_led_rx = 24;  // Green
+
+      const int pin_tcxo_enable = -1;
+
 
     #else
       #error An unsupported nRF board was selected. Cannot compile RNode firmware.

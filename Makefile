@@ -118,6 +118,9 @@ firmware-genericesp32:
 firmware-rak4630:
 	arduino-cli compile --fqbn rakwireless:nrf52:WisCoreRAK4631Board -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x51\""
 
+firmware-wio_tracker_1110_dev:
+	arduino-cli compile --fqbn  Seeeduino:nrf52:wio_tracker_1110 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x52\""
+
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
 
@@ -209,6 +212,8 @@ upload-featheresp32:
 upload-rak4630:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn rakwireless:nrf52:WisCoreRAK4631Board
 
+upload-wio_tracker_1110_dev:
+	arduino-cli upload -p COM5 --fqbn Seeeduino:nrf52:wio_tracker_1110
 
 
 release: release-all

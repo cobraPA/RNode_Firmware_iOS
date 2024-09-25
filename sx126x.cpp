@@ -99,7 +99,7 @@
   #define SPI spiModem
 #endif
 
-extern SPIClass SPI;
+//extern SPIClass SPI;
 
 #define MAX_PKT_LENGTH           255
 
@@ -119,7 +119,7 @@ sx126x::sx126x() :
   _crcMode(1),
   _fifo_tx_addr_ptr(0),
   _fifo_rx_addr_ptr(0),
-  _packet({0}),
+  _packet{0},
   _preinit_done(false),
   _onReceive(NULL)
 {
@@ -130,12 +130,25 @@ sx126x::sx126x() :
 bool sx126x::preInit() {
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
-  
-  #if BOARD_MODEL == BOARD_RNODE_NG_22 || BOARD_MODEL == BOARD_HELTEC_LORA32_V3 || BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3 || BOARD_HELTEC_WIRELESS_PAPER_1_1
+
+  Serial.print("sx126x _ss ");
+  Serial.println(_ss);
+
+  #if BOARD_MODEL == BOARD_RNODE_NG_22 || BOARD_MODEL == BOARD_HELTEC_LORA32_V3 || BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3 || BOARD_MODEL == BOARD_HELTEC_CAPSULE_V3 || BOARD_MODEL == BOARD_HELTEC_WIRELESS_PAPER_1_1
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
   #else
     SPI.begin();
   #endif
+
+// op  0x0106  read 32
+// 0x0101 - ver register
+  Serial.println("sx126x - ver = ");
+  //Serial.println(A32Transfer(0x0106, 0x0101, 0));
+  A32Transfer(0x0101, 0x0101, 0);
+  //Serial.print(" lsb ");
+  //Serial.println(readRegister(0x102));
+  A32Transfer(0x0101, 0x0101, 0);
+
 
   // check version (retry for up to 2 seconds)
   // TODO: Actually read version registers, not syncwords
@@ -148,8 +161,22 @@ bool sx126x::preInit() {
       if ( uint16_t(syncmsb << 8 | synclsb) == 0x1424 || uint16_t(syncmsb << 8 | synclsb) == 0x4434) {
           break;
       }
+  Serial.print("sx126x - syncmsb ");
+  Serial.print(syncmsb);
+  Serial.print(" syncmlsb ");
+  Serial.println(synclsb);
       delay(100);
   }
+
+// op  0x0106  read 32
+// 0x0101 - ver register
+  Serial.print("sx126x - ver msb ");
+  Serial.print(A32Transfer(0x0106, 0x101, 0));
+  Serial.print(" lsb ");
+  Serial.println(readRegister(0x102));
+
+
+
   if ( uint16_t(syncmsb << 8 | synclsb) != 0x1424 && uint16_t(syncmsb << 8 | synclsb) != 0x4434) {
       return false;
   }
@@ -189,6 +216,40 @@ uint8_t ISR_VECT sx126x::singleTransfer(uint8_t opcode, uint16_t address, uint8_
     digitalWrite(_ss, HIGH);
 
     return response;
+}
+
+uint16_t ISR_VECT sx126x::A32Transfer(uint16_t opcode, uint16_t address, uint16_t value)
+{
+    waitOnBusy();
+
+    uint8_t response;
+    uint16_t response_msb;
+    uint16_t response_lsb;
+
+    digitalWrite(_ss, LOW);
+
+    SPI.beginTransaction(_spiSettings);
+    Serial.println(SPI.transfer((opcode & 0xFF00) >> 8));
+    Serial.println(SPI.transfer(opcode & 0x00FF));
+    //SPI.transfer((address & 0xFF00) >> 8);
+    //SPI.transfer(address & 0x00FF);
+    //if (opcode == OP_READ_REGISTER_6X) {
+    //    SPI.transfer(0x00);
+    //}
+    ////SPI.transfer((value & 0xFF00) >> 8);
+    //SPI.transfer(value & 0x00FF);
+    //response_msb = SPI.transfer(value);
+    //response_lsb = SPI.transfer(value);
+    Serial.println(SPI.transfer(0));
+    Serial.println(SPI.transfer(0));
+    Serial.println(SPI.transfer(0));
+    Serial.println(SPI.transfer(0));
+    Serial.println(SPI.transfer(0));
+    SPI.endTransaction();
+
+    digitalWrite(_ss, HIGH);
+
+    return (response_msb << 8) | response_lsb;
 }
 
 void sx126x::rxAntEnable()

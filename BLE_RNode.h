@@ -123,7 +123,7 @@ class MySecurity : public BLESecurityCallbacks {
 
 	uint32_t onPassKeyRequest(){
     ESP_LOGI(LOG_TAG, "PassKeyRequest");
-    uint32_t pass_key = 112233;
+    uint32_t pass_key = 123456;
     Serial.println("Key request ");
     Serial.println(pass_key);
 		return pass_key;
@@ -403,7 +403,7 @@ uint8_t BLERead( void ) {
   uint8_t data = 0;
 
   //Serial.print("BLERead ");
-  #if MCU_VARIANT == MCU_ESP32
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       //buffer_serial();
       if (!fifo_isempty(&BLE_FIFO)) {
         char sbyte = fifo_pop(&BLE_FIFO);
@@ -424,7 +424,7 @@ uint8_t BLERead( void ) {
 bool BLE_data_available( void ) {
   bool stat = false;
 
-  #if MCU_VARIANT == MCU_ESP32
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       if (!fifo_isempty(&BLE_FIFO)) {
         stat = true;
       }

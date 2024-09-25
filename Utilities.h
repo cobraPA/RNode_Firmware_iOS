@@ -15,6 +15,11 @@
 
 #include "Config.h"
 
+//#define XSTR(x) STR(x)
+//#define STR(x) #x
+////NRF52840_XXAA
+//#pragma message "The value of ABC: " XSTR(NRF52840_XXAA)
+
 #if HAS_EEPROM 
     #include <EEPROM.h>
 #elif PLATFORM == PLATFORM_NRF52
@@ -37,6 +42,9 @@ sx127x *LoRa = &sx127x_modem;
 #elif MODEM == SX1280
 #include "sx128x.h"
 sx128x *LoRa = &sx128x_modem;
+#elif MODEM == LR1110
+#include "lr1110.h"
+lr11xx *LoRa = &lr11xx_modem;
 #endif
 
 #include "ROM.h"
@@ -52,10 +60,10 @@ sx128x *LoRa = &sx128x_modem;
   #include "Bluetooth_common.h"
 #endif
 
-//#if HAS_BLUETOOTH == true
-//	void kiss_indicate_btpin();
-//  #include "Bluetooth.h"
-//#endif
+#if HAS_BLUETOOTH == true
+	void kiss_indicate_btpin();
+  #include "Bluetooth.h"
+#endif
 
 #if HAS_BLE == true
   #include "BLE_RNode.h"
@@ -237,6 +245,16 @@ uint8_t boot_vector = 0x00;
 	#endif
 #elif MCU_VARIANT == MCU_NRF52
     #if BOARD_MODEL == BOARD_RAK4630
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+    #elif BOARD_MODEL == BOARD_WIO_T1000E
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
@@ -655,10 +673,10 @@ void serial_write(uint8_t byte) {
         }
       #endif
 
-//	#if HAS_BLUETOOTH
-//		if (bt_state != BT_STATE_CONNECTED) {
-//			Serial.write(byte);
-//		} else {
+	#if HAS_BLUETOOTH
+		if (bt_state != BT_STATE_CONNECTED) {
+			Serial.write(byte);
+		} else {
 //      #if HAS_BLE
 //        if (bt_state == BT_STATE_BLE_CONNECTED) {
           //Print ("ble write!");
@@ -667,11 +685,12 @@ void serial_write(uint8_t byte) {
 
 //        } else 
 //      #endif
-//			    SerialBT.write(byte);
-//		}
+    //Serial.println("< BT byte");
+			    SerialBT.write(byte);
+		}
 //	#else
 //		Serial.write(byte);
-//	#endif
+	#endif
 
 }
 
@@ -813,7 +832,7 @@ void kiss_indicate_lt_alock() {
 }
 
 void kiss_indicate_channel_stats() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		uint16_t ats = (uint16_t)(airtime*100*100);
 		uint16_t atl = (uint16_t)(longterm_airtime*100*100);
 		uint16_t cls = (uint16_t)(total_channel_util*100*100);
@@ -833,7 +852,7 @@ void kiss_indicate_channel_stats() {
 }
 
 void kiss_indicate_phy_stats() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		uint16_t lst = (uint16_t)(lora_symbol_time_ms*1000);
 		uint16_t lsr = (uint16_t)(lora_symbol_rate);
 		uint16_t prs = (uint16_t)(lora_preamble_symbols+4);
@@ -1115,6 +1134,13 @@ void setTXPower() {
 
 		if (model == MODEL_FE) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_FF) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+
+    Serial.print("common-setTXPower - Model: ");
+    Serial.print(model);
+    Serial.print(" Exp Pw ");
+    Serial.println(lora_txp);
+    // todo
+    if(LoRa) LoRa->setTxPower(lora_txp, -1);
 	}
 }
 
@@ -1359,6 +1385,10 @@ bool eeprom_model_valid() {
 	#elif BOARD_MODEL == BOARD_HELTEC32_V2
 	if (model == MODEL_C4 || model == MODEL_C9) {
     #elif BOARD_MODEL == BOARD_RAK4630
+    if (model == MODEL_FF) {
+  #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
+    if (model == MODEL_FF) {
+  #elif BOARD_MODEL == BOARD_WIO_T1000E
     if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {

@@ -181,6 +181,8 @@ bool bt_passkey_callback(uint16_t conn_handle, uint8_t const passkey[6], bool ma
         // multiply by tens however many times needed to make numbers appear in order
         bt_ssp_pin += ((int)passkey[i] - 48) * pow(10, 5-i);
     }
+    Serial.print("bt ssp pin - ");
+    Serial.println(bt_ssp_pin);
     kiss_indicate_btpin();
     if (match_request) {
         if (bt_allow_pairing) {
@@ -193,10 +195,12 @@ bool bt_passkey_callback(uint16_t conn_handle, uint8_t const passkey[6], bool ma
 void bt_connect_callback(uint16_t conn_handle) {
     bt_state = BT_STATE_CONNECTED;
     cable_state = CABLE_STATE_DISCONNECTED;
+    Serial.println("bt connect...");
 }
 
 void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason) {
     bt_state = BT_STATE_ON;
+    Serial.println("bt disconnect...");
 }
 
 bool bt_setup_hw() {
@@ -210,15 +214,28 @@ bool bt_setup_hw() {
     } else {
       bt_enabled = false;
     }
+
+    // todo cep
+      bt_enabled = true;
+    Serial.print("bt en - ");
+    Serial.println(bt_enabled);
+    
     Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
     Bluefruit.autoConnLed(false);
     if (Bluefruit.begin()) {
       Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
-      Bluefruit.Security.setIOCaps(true, true, false);
+
+//      Bluefruit.Security.setIOCaps(true, true, false); // display = true, yes/no = true, keyboard = false
+      Bluefruit.Security.setIOCaps(true, false, true); // display = true, yes/no = true, keyboard = false
       Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
+      
+      // try pin
+      Bluefruit.Security.setPIN("112233");
+
       Bluefruit.Periph.setConnectCallback(bt_connect_callback);
       Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
-      Bluefruit.Security.setIOCaps(true, true, false);
+// extra?
+//      Bluefruit.Security.setIOCaps(true, true, false);
       Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
       const ble_gap_addr_t gap_addr = Bluefruit.getAddr();
       char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
@@ -235,6 +252,10 @@ bool bt_setup_hw() {
       sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
       free(data);
 
+      SerialBT.setPermission(SECMODE_ENC_WITH_MITM, SECMODE_ENC_WITH_MITM);
+      // Can pair
+      //SerialBT.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
+
       bt_ready = true;
       return true;
 
@@ -245,6 +266,8 @@ bool bt_setup_hw() {
 void bt_start() {
   if (bt_state == BT_STATE_OFF) {
     Bluefruit.setName(bt_devname);
+
+    Serial.println(bt_devname);
     bledis.setManufacturer("Adafruit Industries");
     bledis.setModel("Bluefruit Feather52");
     // start device information service
@@ -271,6 +294,8 @@ void bt_start() {
    }
 }
 
+void bt_enable_pairing();
+
 bool bt_init() {
     bt_state = BT_STATE_OFF;
     if (bt_setup_hw()) {
@@ -279,6 +304,8 @@ bool bt_init() {
     } else {
       return false;
     }
+    // todo cep
+    bt_enable_pairing();
 }
 
 void bt_enable_pairing() {
@@ -286,6 +313,8 @@ void bt_enable_pairing() {
   bt_allow_pairing = true;
   bt_pairing_started = millis();
   bt_state = BT_STATE_PAIRING;
+
+  Serial.println("pairing en");
 }
 
 void update_bt() {
