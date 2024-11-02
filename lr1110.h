@@ -156,6 +156,8 @@ private:
   uint8_t _packet[255];
   bool _preinit_done;
   void (*_onReceive)(int);
+  int modulationDirty;
+  int packetParamsDirty;
 };
 
 extern lr11xx lr11xx_modem;

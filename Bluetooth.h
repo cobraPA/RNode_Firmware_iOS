@@ -230,7 +230,7 @@ bool bt_setup_hw() {
       Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
       
       // try pin
-      Bluefruit.Security.setPIN("112233");
+      Bluefruit.Security.setPIN("123456");
 
       Bluefruit.Periph.setConnectCallback(bt_connect_callback);
       Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
