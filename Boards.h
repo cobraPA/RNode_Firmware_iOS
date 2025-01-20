@@ -91,6 +91,7 @@
   #define HAS_BLUETOOTH false
   #define HAS_BLE false
   //#define HAS_TCXO false
+  #define PIN_DISP_SLEEP -1
   #define HAS_PMU false
   #define HAS_NP false
   #define HAS_EEPROM false
@@ -566,10 +567,17 @@
       #define EEPROM_SIZE 1024
       #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 
-      // following pins are for the LR1110 (comp ? sx1262)
-      // LR1110 controls rxen, todo
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
 
+      // following pins are for the LR1110 (comp ? sx1262)
+      // LR1110 controls rxen, no nrf52 pin
       const int pin_rxen = -1;  //N/A
+
+      const int pin_btn_usr1 = 0+6;  //P0.6
+
+      const int pin_buzzer = 0+25;  //P0.25
+      const int pin_buzzer_en = 32+5;  //P1.5
 
   //Arduino15\packages\Seeeduino\hardware\nrf52\1.1.8\libraries\LBM_WM1110\src\internal\Wm1110Hardware.hpp
   // IRQ shows as PIN_LR1110_IRQ
@@ -604,6 +612,9 @@
       const int pin_led_tx = -1;  //N/A
       // T1000-E single LED (Mesht)
       const int pin_led_rx = 24;  // Green
+
+      const int pin_3v3_en_sensor = 32+6;  // P1.6
+      const int pin_3v3_en_accel = 32+7;  // P1.7
 
       const int pin_tcxo_enable = -1;
 

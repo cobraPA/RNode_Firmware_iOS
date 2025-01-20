@@ -73,6 +73,10 @@ lr11xx *LoRa = &lr11xx_modem;
   #include "Power.h"
 #endif
 
+#if HAS_INPUT == true
+	#include "Input.h"
+#endif
+
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#include "Device.h"
 #endif
@@ -277,6 +281,8 @@ void hard_reset(void) {
 
 // LED Indication: Error
 void led_indicate_error(int cycles) {
+  Serial.println("led_indicate_error");
+
 	#if HAS_NP == true
 		bool forever = (cycles == 0) ? true : false;
 		cycles = forever ? 1 : cycles;
@@ -289,6 +295,10 @@ void led_indicate_error(int cycles) {
 		}
 		npset(0,0,0);
 	#else
+    #if BOARD_MODEL == BOARD_WIO_T1000E
+    // todo
+    #else
+
 		bool forever = (cycles == 0) ? true : false;
 		cycles = forever ? 1 : cycles;
 		while(cycles > 0) {
@@ -302,6 +312,7 @@ void led_indicate_error(int cycles) {
 	    }
 	    led_rx_off();
 	    led_tx_off();
+      #endif
 	#endif
 }
 
@@ -576,7 +587,12 @@ int8_t  led_standby_direction = 0;
 						led_rx_off();
 					#endif
 				#else
+          #if BOARD_MODEL == BOARD_WIO_T1000E
+          // todo
+          #else
 					led_rx_off();
+          #endif
+
 				#endif
 			}
 		}
@@ -656,7 +672,11 @@ int8_t  led_standby_direction = 0;
 						led_rx_off();
 					#endif
 				#else
+          #if BOARD_MODEL == BOARD_WIO_T1000E
+          // todo
+          #else
 					led_rx_off();
+          #endif
 				#endif
 			}
 		}

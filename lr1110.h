@@ -101,6 +101,8 @@ public:
 
   void dumpRegisters(Stream& out);
 
+  void foreground(void);
+
 private:
   void explicitHeaderMode();
   void implicitHeaderMode();

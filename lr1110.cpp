@@ -24,6 +24,8 @@
   #define ISR_VECT
 #endif
 
+int debug_print_enabled = 0;
+
 volatile uint8_t TXCompl_flag = 0;
 
 #define OP_RF_FREQ_6X               0x86
@@ -288,7 +290,6 @@ uint8_t cmd5[13] = {10,0,0x1,0x12,
 
 cmdTransfer("dio sw cfg", cmd5);
 
-
 ///// XXXXXXXX DISABLED
 
 #if defined(BOARD_WIO_TRACK_1110)
@@ -402,6 +403,11 @@ void lr11xx::doSetup(void)
 
 Serial.println("Doing Setup  - dio  DCDC  - TCXO     >>>>>>>>>>>>");
 
+/// todo
+// early cal at freq before tcxo enable?
+//calibrate_image(906000000);
+// txco fails if this is done now
+
 
 #if defined(BOARD_WIO_TRACK_1110)
 // set tcxo mode
@@ -417,11 +423,11 @@ uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
 // tune = 0 , 1.6V tracker t1000-e
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x3, 0xd7};
 // test with 0xa4 delay
-//uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x0, 0xa4};
+uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x0, 0xa4};
 // shorter 5000uS (RadioLib default) 0xa4  (5000 / 30.52)
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x0, 0xa4};
 // shorter 5000uS (RadioLib default) 0xa4  (5000 / 30.52)  - 1.8V
-uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
+//uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
 #endif
 
 cmdTransfer("tcxo", cmd4);
@@ -443,14 +449,20 @@ cmdTransfer("setRegMode", cmd8);
 
 // SetRegMode
 // enable DC-DC for TX and when hi accuracy is needed
-uint8_t cmd7[6] = {3,0,0x1,0x10, 1};
+//uint8_t cmd7[6] = {3,0,0x1,0x10, 1};
+// disable DC-DC - LDO only
+uint8_t cmd7[6] = {3,0,0x1,0x10, 0};
 cmdTransfer("setRegMode", cmd7);
 
 
 // SetDioAsRfSwitch
 //C:\Users\cobra\AppData\Local\Arduino15\packages\Seeeduino\hardware\nrf52\1.1.8\libraries\LBM_WM1110\src\internal\lbm_hal\ral_lr11xx_bsp.c
 // ral_lr11xx_bsp_get_rf_switch_cfg()
-uint8_t RfSwEn = 0b1111;  // enable  DIO10 - DIO9 - DIO8 - DIO7 - DIO6 - DIO5
+//uint8_t RfSwEn = 0b1111;  // enable  DIO10 - DIO9 - DIO8 - DIO7 - DIO6 - DIO5
+// enable upper bits?
+//uint8_t RfSwEn = 0b111111;  // enable  DIO10 - DIO9 - DIO8 - DIO7 - DIO6 - DIO5
+// Docs don't list 9, we don't use 10
+uint8_t RfSwEn = 0b01111;  // enable  DIO10 - DIO8 - DIO7 - DIO6 - DIO5
 // standby none
 
 // wio tracker dev
@@ -471,7 +483,7 @@ uint8_t gnss_enable = 0b0;  // switch 2 - internal GNSS
 uint8_t wifi_enable = 0b0;  // switch 3 - Wifi scanner
 #endif
 
-
+// setdioasrfswitch
 uint8_t cmd5[12] = {10,0,0x1,0x12, 
   RfSwEn, 
   0, // none - standby
@@ -480,7 +492,7 @@ uint8_t cmd5[12] = {10,0,0x1,0x12,
   tx_hp_enable,
   0,  // unused
   gnss_enable,
-  wifi_enable
+  wifi_enable,
   };
 
 cmdTransfer("dio sw cfg", cmd5);
@@ -501,7 +513,9 @@ cmdTransfer("setRegMode", cmd8);
 
 // SetRegMode
 // enable DC-DC for TX and when hi accuracy is needed
-uint8_t cmd7[6] = {3,0,0x1,0x10, 1};
+//uint8_t cmd7[6] = {3,0,0x1,0x10, 1};
+// no DC-DC converter enable.
+uint8_t cmd7[6] = {3,0,0x1,0x10, 0};
 cmdTransfer("setRegMode", cmd7);
 #endif
 
@@ -535,6 +549,8 @@ uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
 cmdTransfer("tcxo", cmd4);
 #endif
 
+#if 0
+/// moved to before modulation params
 
 //setpackettype
 uint8_t cmd[10] = {3,0,0x2,0xe,2};
@@ -546,6 +562,8 @@ uint8_t cmd3[10] = {2,3, 1,0xd};
 
 cmdTransfer("errors?", cmd3);
 
+#endif
+
 // SyncWord / Private network (should be 0x12)
 //uint8_t cmd6[5] = {3,0, 0x2,0x8, 0x0};
 // public - should be 0x34
@@ -556,6 +574,8 @@ cmdTransfer("errors?", cmd3);
 uint8_t cmd6[5] = {3,0, 0x2,0x2b, 0x12};
 cmdTransfer("SyncWord", cmd6);
 
+//todo
+// not set in radiolib or meshtastic ???  try without
 // SetRssiCalibration
 // EVK defaults 600MHz - 2GHz
 uint8_t cmd9[16] = {13,0, 0x2,0x29, 0x22, 0x32, 0x43, 0x45, 0x64,
@@ -694,7 +714,8 @@ int lr11xx::decode_stat(const char *prt,uint8_t stat1,uint8_t stat2,uint8_t prin
 
 int lr11xx::decode_stat(uint8_t stat, uint8_t stat2)
 {
-  int cmd_fail = decode_stat(stat, 1);
+  //int cmd_fail = decode_stat(stat, 1);
+  int cmd_fail = decode_stat(stat);
   switch ((stat2 & 0xf0)>>4)
   {
     case 0:
@@ -762,6 +783,7 @@ int lr11xx::decode_stat(uint8_t stat, uint8_t stat2)
 uint16_t ISR_VECT lr11xx::cmdTransfer(const char *prt, uint8_t *cmd)
 {
   // disable prints with 0! 
+  //return cmdTransfer(prt, cmd, debug_print_enabled);
   return cmdTransfer(prt, cmd, 0);
 }
 
@@ -795,6 +817,11 @@ uint16_t ISR_VECT lr11xx::cmdTransfer(const char *prt, uint8_t *cmd, bool print_
     // decode stat1, stat2
     if(x==1)
       if (print_it) cmd_fail = decode_stat(stat1,response);
+  }
+  if(debug_print_enabled) {
+    Serial.print(prt);
+    Serial.print("- ");
+    decode_stat(prt,stat1,response,1);
   }
   decode_stat(prt,stat1,response,print_it);
 
@@ -863,9 +890,45 @@ void lr11xx::rxAntEnable()
 }
 
 void lr11xx::loraMode() {
+
+  //setpackettype
+  uint8_t cmd[10] = {3,0,0x2,0xe,2};
+
+  cmdTransfer("packettype lora", cmd);
+
+#if 0
+  Serial.print("loramode st ");
+  Serial.print(cmd[2]);
+  Serial.print(" ");
+  Serial.print(cmd[3]);
+  Serial.print(" ");
+  Serial.println(cmd[4]);
+#endif
+
+  // test mode
+  //uint8_t buf2[10] = {2,2, 0x02, 0x02 };
+
+  //cmdTransfer("packettype", buf2);
+  //Serial.print("LM stat1 ");
+  //decode_stat(buf2[2], buf2[3]);
+#if 0
+  Serial.print(buf2[2]);
+  Serial.print(" stat2 ");
+  Serial.print(buf2[3]);
+  Serial.print(" stat rt ");
+  Serial.print(buf2[4]);
+  Serial.print(" lora2? ");
+  Serial.println(buf2[5]);
+#endif
+
+  //getErrors2();
+
+
+  #if 0
     // enable lora mode on the SX1262 chip
     uint8_t mode = MODE_LONG_RANGE_MODE_6X;
     executeOpcode(OP_PACKET_TYPE_6X, &mode, 1);
+  #endif
 }
 
 void lr11xx::waitOnBusy() {
@@ -988,8 +1051,10 @@ void lr11xx::readBuffer(uint8_t* buffer, size_t size)
   //uint8_t cnt_in = cmd[1];
   uint8_t response;
 
-    Serial.println("go cmd - readBuf");
-    //Serial.println(prt);
+    Serial.print("go cmd - readBuf- ptr ");
+    Serial.print(_fifo_rx_addr_ptr);
+    Serial.print(" sz ");
+    Serial.println(size);
 
     waitOnBusy();
     digitalWrite(_ss, LOW);
@@ -1003,6 +1068,7 @@ void lr11xx::readBuffer(uint8_t* buffer, size_t size)
       decode_stat(response);
   }
     response = SPI.transfer(0);
+    Serial.println(response);
     decode_stat(response);
   for (int x=0; x<size; x++)
   {
@@ -1013,7 +1079,7 @@ void lr11xx::readBuffer(uint8_t* buffer, size_t size)
     SPI.endTransaction();
     digitalWrite(_ss, HIGH);
 
-    Serial.println("done\n----");
+    Serial.println("\ndone\n----");
 
 
   #if 0
@@ -1060,9 +1126,10 @@ modulationDirty = 0;
   buf[7] = 0x00;
 #endif
 
-  Serial.print("Set Modulation params - ");
+  //Serial.print("Set Modulation params - ");
 
   uint8_t cmd2[10] = {6,0, 0x02, 0x0f, sf /*SF*/, bw /*BW*/, cr /*CR*/, ldro /*LDR*/};
+  #if 0
   Serial.print("sf ");
   Serial.print(cmd2[4]);
   Serial.print(" bw ");
@@ -1071,6 +1138,7 @@ modulationDirty = 0;
   Serial.print(cmd2[6]);
   Serial.print(" ldro ");
   Serial.println(cmd2[7]);
+  #endif
 
   cmdTransfer("modparams", cmd2);
 
@@ -1085,10 +1153,10 @@ void lr11xx::getErrors(void)
 
   cmdTransfer("err cmd", cmd3);
 
-  Serial.print("====         err dat EEEEEE ");
-  Serial.print(cmd3[4]);
-  Serial.print(" ");
-  Serial.println(cmd3[5]);
+//  Serial.print("====         err dat EEEEEE ");
+//  Serial.print(cmd3[4]);
+//  Serial.print(" ");
+//  Serial.println(cmd3[5]);
 
   uint8_t cmd2[5] = {2,0, 1,0xe};
 
@@ -1102,10 +1170,18 @@ void lr11xx::setPacketParams(long preamble, uint8_t headermode, uint8_t length, 
   if(packetParamsDirty==0) return;
   packetParamsDirty=0;
 
+#if 0
+// set at Setup
   //setpackettype
   uint8_t cmd[10] = {3,0,0x2,0xe,2};
 
   cmdTransfer("packettype lora", cmd);
+#endif
+
+  // debug rx todo XXXXX
+  //length=20;
+
+
 
   // packet params
   uint8_t buf[10] = {8,0, 0x02, 0x10 };
@@ -1118,7 +1194,7 @@ void lr11xx::setPacketParams(long preamble, uint8_t headermode, uint8_t length, 
   // standard IQ setting (no inversion)
   buf[9] = 0x00; 
 
-#if 1
+#if 0
   Serial.print("Packet params  - preamble ");
   Serial.print(preamble);
   Serial.print(" headermode ");
@@ -1131,6 +1207,22 @@ void lr11xx::setPacketParams(long preamble, uint8_t headermode, uint8_t length, 
 #endif
 
   cmdTransfer("packet params", buf);
+
+  #if 0
+  // test mode
+  uint8_t buf2[10] = {2,2, 0x02, 0x02 };
+
+  cmdTransfer("1 packettype", buf2);
+  Serial.print(" stat1 ");
+  Serial.print(buf2[2]);
+  Serial.print(" stat2 ");
+  Serial.print(buf2[3]);
+  Serial.print(" stat rt ");
+  Serial.print(buf2[4]);
+  Serial.print(" lora2? ");
+  Serial.println(buf2[4]);
+  #endif
+
 
   // test
   //getErrors();
@@ -1186,6 +1278,12 @@ void lr11xx::reset(void) {
  //   }
 
   }
+
+    // setup pins
+
+    pinMode(pin_3v3_en_sensor, OUTPUT);
+    digitalWrite(pin_3v3_en_sensor, HIGH);
+
 }
 
 // lr1110
@@ -1231,6 +1329,9 @@ void lr11xx::calibrate_image(long frequency) {
   else if (frequency >= 902E6 && frequency <= 928E6) {
     image_freq[0] = 0xE1;
     image_freq[1] = 0xE9;
+// test with smaller image range around 906
+//    image_freq[0] = 0xE2;
+//    image_freq[1] = 0xE4;
   } else {
     freq_error = 1;
   }
@@ -1240,12 +1341,15 @@ void lr11xx::calibrate_image(long frequency) {
 
     cmdTransfer("calib img", buf);
 
-    Serial.print("freq ");
+    Serial.print("calib img - freq ");
     Serial.print(frequency);
     Serial.print(" ");
     Serial.print(image_freq[0]);
     Serial.print(" ");
     Serial.println(image_freq[1]);
+  } else {
+    Serial.println('calib img - FREQ ERROR  EEEEE');
+
   }
 }
 
@@ -1269,7 +1373,7 @@ void lr11xx::getErrors2(void)
 int lr11xx::begin(long frequency)
 {
 
-Serial.print("\n Lora begin lr1110\n - - RESET - -  XXXXXXXXXXXXXXXXXXXXXXX");
+Serial.println("\n Lora begin lr1110\n - - RESET - -  XXXXXXXXXXXXXXXXXXXXXXX");
   
   if (_busy != -1) {
       pinMode(_busy, INPUT);
@@ -1354,6 +1458,9 @@ Serial.print("\n Lora begin lr1110\n - - RESET - -  XXXXXXXXXXXXXXXXXXXXXXX");
   //calibrate(0b100010);
   calibrate(0b111111);
 
+// todo - testing after calibrate
+  calibrate_image(frequency);
+
   #if 1
     getErrors2();
   #else
@@ -1370,10 +1477,11 @@ Serial.print("\n Lora begin lr1110\n - - RESET - -  XXXXXXXXXXXXXXXXXXXXXXX");
   Serial.print(" .Pow. ");
   //setTxPower(2);
   // tested for a while
-  //setTxPower(6);
+  setTxPower(6);
+  //setTxPower(4);
   //setTxPower(10);
 
-  setTxPower(0);
+  //setTxPower(0);
 
   Serial.print(" .CRC. ");
   enableCrc();
@@ -1386,6 +1494,12 @@ Serial.print("\n Lora begin lr1110\n - - RESET - -  XXXXXXXXXXXXXXXXXXXXXXX");
   // set base addresses
   //uint8_t basebuf[2] = {0};
   //executeOpcode(OP_BUFFER_BASE_ADDR_6X, basebuf, 2);
+
+  //setpackettype
+  uint8_t cmd[10] = {3,0,0x2,0xe,2};
+
+  cmdTransfer("packettype lora", cmd);
+
 
   setModulationParams(_sf, _bw, _cr, _ldro);
   setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
@@ -1406,10 +1520,14 @@ void lr11xx::end()
   _preinit_done = false;
 }
 
+// lr1110
+// for TX
 int lr11xx::beginPacket(int implicitHeader)
 {
-      Serial.println("bbbbb\nbeginpacket\n     bbbbbbb");
+//      Serial.println("bbbbb\nbeginpacket\n     bbbbbbb");
   standby();
+
+  loraMode();
 
   if (implicitHeader) {
     implicitHeaderMode();
@@ -1423,16 +1541,28 @@ int lr11xx::beginPacket(int implicitHeader)
   // set in endPacket()
   //setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
+      // test
+      modulationDirty=1;
+      setModulationParams(_sf, _bw, _cr, _ldro);
+      // length not known yet...
+      //setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+
   return 1;
 }
 
 // lr1110
+// for TX
 int lr11xx::endPacket()
 {
-      setModulationParams(_sf, _bw, _cr, _ldro);
+
+    // todotodo debug rx - override tx
+    _payloadLength = 94;
+
+
+// both in beginPacket
+//      setModulationParams(_sf, _bw, _cr, _ldro);
       setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
-      //setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
   #if 0
       // put in single TX mode
@@ -1440,8 +1570,8 @@ int lr11xx::endPacket()
       executeOpcode(OP_TX_6X, timeout, 3);
   #endif
 
-      //Serial.print("start TX sz ");
-      //Serial.println(_payloadLength);
+      Serial.print("start TX sz ");
+      Serial.println(_payloadLength);
       //yield();
 
       // put in single TX mode
@@ -1449,6 +1579,7 @@ int lr11xx::endPacket()
       uint8_t cmd2[8] = {5,0,0x2,0xa,0x0,0x0,0x0};
 
       cmdTransfer("->tx", cmd2);
+
 
 #if 0
       uint8_t buf[2];
@@ -1503,6 +1634,7 @@ int lr11xx::endPacket()
       while (!TXCompl_flag) {
         yield();
       }
+      Serial.println("tx cmp");
       TXCompl_flag=0;
 
 
@@ -1536,10 +1668,14 @@ int lr11xx::endPacket()
 
       cmdTransfer("->clrIrq TX", cmd3);
 
+      //Serial.print(" stat after tx/tx ");
+      //decode_stat(cmd3[2], cmd3[3]);
 
-        cmd[2]=0x1; cmd[3]=0; cmd[4]=0; cmd[5]=0; cmd[6]=0; cmd[7]=0;
-        cmdTransfer("->getStat after clr", cmd, 0);
 
+        //cmd[2]=0x1; cmd[3]=0; cmd[4]=0; cmd[5]=0; cmd[6]=0; cmd[7]=0;
+        //cmdTransfer("->getStat after clr", cmd, 0);
+
+#if 0
       Serial.print("endpacket tx- ");
       Serial.print(cmd[2]);
       Serial.print(" ");
@@ -1552,11 +1688,12 @@ int lr11xx::endPacket()
       Serial.print(cmd[6]);
       Serial.print(" ");
       Serial.println(cmd[7]);
+#endif
 
-      getErrors();
+      //getErrors();
 
 
-      Serial.println("eeeeeee\nendpacket\n     eeeeeee");
+//      Serial.println("eeeeeee\nendpacket\n     eeeeeee");
   return 1;
 }
 
@@ -1568,21 +1705,28 @@ int lr11xx::endPacket()
 //	const uint8_t RX_ONGOING = 0x04;
 uint8_t lr11xx::modemStatus() {
 
+    uint8_t byte = 0x00;
+#if 0  //debug rx
     // GetStatus, last 4 are irq status on return
     uint8_t cmd[9] = {6,0,0x1,0x0, 0x0,0x0,0x0,0x0};
-    uint8_t byte = 0x00;
     uint8_t toClr = 0x00;
+    int debug = 0;
 
     cmdTransfer("->Modem-IrqStat", cmd, 0);
     // Preamble detected
     if(cmd[7] & 0b10000) {
       byte = byte | 0x01 | 0x04;
       toClr = 0b10000;
+      Serial.print("Prembl ");
+      // debug rx
+      debug=1;
     }
     // Header Valid
     if(cmd[7] & 0b100000) {
       byte = byte | 0x02 | 0x04;
       toClr |= 0b100000;
+      Serial.print("HdrVl ");
+      debug=1;
     }
 
     // clear active IRQs
@@ -1590,10 +1734,25 @@ uint8_t lr11xx::modemStatus() {
     if(toClr) {
       uint8_t cmd2[9] = {6,0,0x1,0x14, 0x0,0x0,0x0,toClr};
       cmdTransfer("->Clr Act IRQs", cmd2);
+      Serial.print("Clr ");
+      debug=1;
     } else {
       //Serial.println("Clr Irq -NA");
     }
 
+    if(debug)
+      Serial.println(".");
+
+    if(cmd[7]) {
+    Serial.print("modemstat cmd-7 ");
+    Serial.println(cmd[7]);
+    }
+    if(byte>0) {
+    Serial.print("modemstat ");
+    Serial.println(byte);
+    }
+
+#endif
     return byte; 
 
 #if 0
@@ -1624,10 +1783,21 @@ uint8_t lr11xx::modemStatus() {
 // lr1110
 uint8_t lr11xx::currentRssiRaw() {
     // GetRssiInst
-    uint8_t cmd[7] = {4,0,0x2,0x5, 0x0,0x0};
+    uint8_t cmd[7] = {2,2,0x2,0x5, 0x0,0x0};
 
+#if 0  //debug rx
     cmdTransfer("->Modem-GetRssi", cmd, 0);
 
+    if(cmd[5] || cmd[4]) {
+      Serial.print(cmd[2]);
+      Serial.print(" ");
+      Serial.print(cmd[3]);
+      Serial.print(" ");
+      Serial.print(cmd[4]);
+      Serial.print(" ");
+      Serial.println(cmd[5]);
+    }
+#endif
     return cmd[5];
 }
 
@@ -1656,27 +1826,42 @@ uint8_t lr11xx::packetRssiRaw() {
 
 // used
 int ISR_VECT lr11xx::packetRssi() {
-    Serial.println("    ------    packetRssi ----------   XXXXXXXXX TODO");
+    //Serial.println("    ------    packetRssi ----------   XXXXXXXXX TODO");
+
+    uint8_t cmd[7] = {2,4,0x2,0x4};
+
+    cmdTransfer("->Modem-GetPacketStat", cmd, 0);
+    // use RssiPkt
+    int pkt_rssi = -cmd[5] / 2;
+    Serial.print("RssiPkt ");
+    Serial.println(pkt_rssi);
+    return pkt_rssi;
+
+
     #if 0
     // may need more calculations here
     uint8_t buf[3] = {0};
     executeOpcodeRead(OP_PACKET_STATUS_6X, buf, 3);
     int pkt_rssi = -buf[0] / 2;
     return pkt_rssi;
-    #else
-    return 0;
     #endif
 }
 
 // used
 uint8_t ISR_VECT lr11xx::packetSnrRaw() {
-    Serial.println("    ------    packetSnrRaw ----------   XXXXXXXXX  TODO");
+    //Serial.println("    ------    packetSnrRaw ----------   XXXXXXXXX  TODO");
+    Serial.print("Snr ");
+    uint8_t cmd[7] = {2,4,0x2,0x4};
+
+    cmdTransfer("->Modem-GetPacketStat", cmd, 0);
+    int8_t snr = (((int8_t)cmd[6]) + 2) >> 2;
+    Serial.println(snr);
+    return snr;
+
     #if 0
     uint8_t buf[3] = {0};
     executeOpcodeRead(OP_PACKET_STATUS_6X, buf, 3);
     return buf[1];
-    #else
-    return 0;
     #endif
 }
 
@@ -1687,6 +1872,7 @@ float ISR_VECT lr11xx::packetSnr() {
     return float(buf[1]) * 0.25;
 }
 
+// unused
 long lr11xx::packetFrequencyError()
 {
     // todo: implement this, no idea how to check it on the sx1262
@@ -1705,6 +1891,15 @@ size_t lr11xx::write(const uint8_t *buffer, size_t size)
         size = MAX_PKT_LENGTH - _payloadLength;
     }
 
+//todo
+//    Serial.print("write _payloadLength ");
+//    Serial.print(_payloadLength);
+//    Serial.print(" + size ");
+//    Serial.println(size);
+    Serial.print("write ch: ");
+    Serial.print(buffer[0]);
+    Serial.print(" sz ");
+    Serial.println(size);
     // write data
     writeBuffer(buffer, size);
     _payloadLength = _payloadLength + size;
@@ -1723,25 +1918,53 @@ int ISR_VECT lr11xx::available() {
 // lr1110
 int ISR_VECT lr11xx::available(uint8_t *size, uint8_t *rxbufstart)
 {
-
+    uint8_t sz_read = 0;
     // Rx buffer status
     uint8_t cmd[8] = {2,3,0x2,0x3,0x0,0x0,0x0};
 
     cmdTransfer("->rx buf stat", cmd);
     // returns stat1, PayloadLengthRX, RxStartBufferPointer
 
-    *size = cmd[5];
-    *rxbufstart = cmd[6];
+    // CMD_DAT - length is returned in Stat2
+    if (cmd[2] & 0b110 ) {
+      if(size) *size = cmd[3];
+      sz_read = cmd[3];
 
-    Serial.print("rx avail sz: ");
-    Serial.print(*size);
+    // CMD_OK - length should be in packetlength field
+    } else if (cmd[2] & 0b100 ) {
+      if(size) *size = cmd[5];
+      sz_read = cmd[5];
+
+    }
+  
+
+    //if(size) *size = cmd[5];
+    if(rxbufstart) *rxbufstart = cmd[6];
+
+#if 1
+    Serial.print("rx buf ");
+    Serial.print(cmd[2]);
+    Serial.print(" ");
+    Serial.print(cmd[3]);
+    Serial.print(" ");
+    Serial.print(cmd[4]);
+    Serial.print(" rx avail sz: ");
+    Serial.print(cmd[5]);
     Serial.print(" buf strt: ");
-    Serial.println(*rxbufstart);
+    Serial.print(cmd[6]);
+    Serial.print(" rtn ");
+    Serial.println(sz_read - _packetIndex);
+    //Serial.print(" stat ");
+    //Serial.println(cmd[5]);
+#endif
 
     // payloadlen? - packetindex
     // TODO?  read seems to check the modem size against
     // the packetindex on the mcu side?
-    return (*size) - _packetIndex;
+    if(sz_read)
+      return sz_read - _packetIndex;
+    else
+      return 0;
 
   #if 0  // sx1262 status
     uint8_t buf[2] = {0};
@@ -1764,6 +1987,12 @@ int ISR_VECT lr11xx::read()
   // if received new packet
   if (_packetIndex == 0) {
       _fifo_rx_addr_ptr = rxbufstart;
+
+      Serial.print("read ptr ");
+      Serial.print(rxbufstart);
+      Serial.print(" sz ");
+      Serial.println(size);
+
 
       readBuffer(_packet, size);
   }
@@ -1841,6 +2070,10 @@ void lr11xx::onReceive(void(*callback)(int))
       Serial.print(cmd4[6]);
       Serial.print(" ");
       Serial.println(cmd4[7]);
+
+      
+    // shows unknown error and bit 15. which is RFU (not define in docs)
+    //getErrors2();
 
     // Clear and read, clearirq
     uint8_t cmd2[9] = {6,0,0x1,0x14,cmd4[4],cmd4[5],cmd4[6],cmd4[7]};
@@ -1937,8 +2170,12 @@ void lr11xx::onReceive(void(*callback)(int))
 // lr1110 
 void lr11xx::receive(int size)
 {
+    loraMode();
+
     // test
+    modulationDirty=1;
     setModulationParams(_sf, _bw, _cr, _ldro);
+
 
     if (size > 0) {
         implicitHeaderMode();
@@ -1946,11 +2183,22 @@ void lr11xx::receive(int size)
         // tell radio payload length
         _payloadLength = size;
         packetParamsDirty=1;
+//        setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
         setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+// debug rx   XXX
+// set max preamble for RX
+//        setPacketParams(0xffff, _implicitHeaderMode, _payloadLength, _crcMode);
     } else {
         explicitHeaderMode();
-        _payloadLength = size;
+        // todo todo
+        //_payloadLength = size;
+
+        // debug rx  XXX
         packetParamsDirty=1;
+        //setPacketParams(_preambleLength, _implicitHeaderMode, 50, _crcMode);
+
+
+        //packetParamsDirty=1;
         setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
     }
 
@@ -1960,33 +2208,45 @@ void lr11xx::receive(int size)
 
 
         // LoRa ResetStats
-        uint8_t cmd9[15] = {2,0,0x2,0x0};
-        cmdTransfer("->ResetStats", cmd9);
+        //uint8_t cmd9[15] = {2,0,0x2,0x0};
+        //cmdTransfer("->ResetStats", cmd9);
 
-    Serial.print("start rx < - - -  sz: ");
-    Serial.println(size);
+    //Serial.print("start rx <- sz: ");
+    //Serial.println(size);
 
+  // todotodo testtest
+  // tested for a while
+  setTxPower(6);
+
+    uint8_t cmd2[8] = {2,0,0x1,0xb};
+
+    cmdTransfer("->ClearRxBuffer", cmd2);
 
     // continuous mode
     // Rx mode, no timeout  (setRX)
     // stay until command/continuous mode
-    uint8_t cmd[8] = {5,0,0x2,0x9,0xff,0xff,0xff};
+    //uint8_t cmd[8] = {5,0,0x2,0x9,0xff,0xff,0xff};
     // go to standby after packet reception
-    //uint8_t cmd[8] = {5,0,0x2,0x9,0x00,0x00,0x00};
+    uint8_t cmd[8] = {5,0,0x2,0x9,0x00,0x00,0x00};
 
     cmdTransfer("->rx", cmd);
+    debug_print_enabled=0;
 
-  #if 1
+    
+  #if 0
     //getErrors2();
-  #else
+  //#else
     Serial.println("get errors");
     uint8_t cmd2[8] = {5,0, 0x01, 0x0d, 0x0, 0x0,0x0};
     cmdTransfer("getErr", cmd2);
     Serial.print("Fail errors ");
-    Serial.print(cmd2[5] & 0x1);
+//    Serial.print(cmd2[5] & 0x1);
+    Serial.print(cmd2[5] );
     Serial.print(", ");
     Serial.println(cmd2[6]);
   #endif
+
+    //decode_stat(cmd2[2], cmd2[3]);
 
 }
 
@@ -2000,7 +2260,8 @@ void lr11xx::standby()
 
   //cmdTransfer("->stby xosc", cmd);
   cmdTransfer("->stby RC", cmd);
-  Serial.println("go to standby  ----          XXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  
+  //Serial.println("go to standby  ----          XXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 }
 
 
@@ -2097,9 +2358,9 @@ void lr11xx::setTxPower(int level, int outputPin) {
     // high efficiency
     regPower = ((level - 14) * 225)/-31 +14;
   }
-  #endif
+#endif
 
-  uint8_t rampTime = 0x02;  // 40uS
+  uint8_t rampTime = 0x02;  // 48uS
 
   uint8_t cmd4[10] = {4,0,0x02, 0x11, level,rampTime};
 
@@ -2107,17 +2368,18 @@ void lr11xx::setTxPower(int level, int outputPin) {
 
   // RXBoosted - enabled, ~2mA more consumption in RX
   // enable
-  uint8_t cmd5[6] = {3,0,0x02, 0x27, 1};
+  //uint8_t cmd5[6] = {3,0,0x02, 0x27, 1};
   // disable
-  //uint8_t cmd5[6] = {3,0,0x02, 0x27, 0};
+  uint8_t cmd5[6] = {3,0,0x02, 0x27, 0};
   cmdTransfer("->rx boost", cmd5);
 
 #if 0
   Serial.print("power req ");
   Serial.print(level);
-#endif
+// or
   Serial.print("power reg: ");
   Serial.println(level);
+#endif
 
   //  SX1262
   #if 0
@@ -2162,16 +2424,21 @@ void lr11xx::setFrequency(long freq) {
   Serial.print( "freq - ");
   Serial.println(freq);
   // set freq cmd
+  // SetRfFrequency
   uint8_t cmd4[10] = {6,0,0x02,0x0b, 
     (freq >> 24) & 0xFF, 
     (freq >> 16) & 0xFF, 
     (freq >> 8) & 0xFF, 
     freq & 0xFF};
 
-  cmdTransfer("->freq", cmd4);
+  if( freq < 400000000 || freq > 930000000 )
+    Serial.println("freq out of range, not set");
+  else
+    cmdTransfer("->freq", cmd4);
 
-  calibrate_image(_frequency);
-  Serial.println("lr1110 calibrate");
+// todo - notes say fails 'with TCXO fitted' ?
+//  calibrate_image(_frequency);
+//  Serial.println("lr1110 calibrate image");
 
 
 }
@@ -2297,9 +2564,16 @@ void lr11xx::setCodingRate4(int denominator)
 
 void lr11xx::setPreambleLength(long length)
 {
+  // todo debug rx  XXX
+  // override for test
+ //length=10;
+
   _preambleLength = length;
   packetParamsDirty=1;
   //setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
+      Serial.print("setPreambleLength ");
+      Serial.println(_preambleLength);
+
 }
 
 void lr11xx::setSyncWord(uint16_t sw)
@@ -2395,7 +2669,8 @@ void lr11xx::dioStatInternal(uint8_t *stat1, uint8_t *int2, uint8_t *int3, uint8
 
     cmdTransfer("->getStat irq", cmd);
 
-#if 1
+// debug rx  (disabled)
+#if 0
   Serial.print(cmd[2]);
   Serial.print(" ");
   Serial.print(cmd[3]);
@@ -2453,9 +2728,13 @@ uint8_t ISR_VECT lr11xx::dumpRx(void)
         Serial.print(" start= ");
         Serial.println(cmd2[6]);
 
-        uint8_t stat2 = cmd2[3];
+        uint8_t stat2 = cmd2[5];
         return stat2;
 }
+
+
+int  _db_pktLen;
+int  _db_rxcnt;
 
 
 // lr1110 - todo 2 item - ignores error, packet length
@@ -2467,15 +2746,35 @@ void ISR_VECT lr11xx::handleDio0Rise()
     int doClr = 0;
 
 //  TEST TEST
-  dumpRx();
+// debug rx  XXX
+//  dumpRx();
 
 //  TEST TEST
 
 
 
-
   //dioStat();
+  // debug rx  XXX
   dioStat(&cmd[2], &cmd[5], &cmd[6], &cmd[7]);
+
+#if 0
+  Serial.print("handleDio  diostat ");
+  Serial.print(cmd[2]);
+  Serial.print(" ");
+  Serial.print(cmd[3]);
+  Serial.print(" - ");
+  Serial.print(cmd[4]);
+  Serial.print(" ");
+  Serial.print(cmd[5]);
+  Serial.print(" ");
+  Serial.print(cmd[6]);
+  Serial.print(" ");
+  Serial.println(cmd[7]);
+
+// debug rx  XXX
+  dumpRx();
+#endif
+
 
 #if 0
   Serial.print("handleDio  --------------- ");
@@ -2524,26 +2823,30 @@ void ISR_VECT lr11xx::handleDio0Rise()
     }
 
 
-    int packetLength = 0;
+    uint8_t packetLength = 0;
 
     // if RXdone
     if (cmd[7] & 0b1000) {
       clr[7] = 0b1000;
       doClr = 1;
 
-        Serial.println("RxDone ------------------------");
+// debug rx
+//        Serial.println("RxDone ------------------------");
 
-  Serial.print(cmd[4]);
-  Serial.print(" ");
-  Serial.print(cmd[5]);
-  Serial.print(" ");
-  Serial.print(cmd[6]);
-  Serial.print(" ");
-  Serial.println(cmd[7]);
+//  Serial.print(cmd[4]);
+//  Serial.print(" ");
+//  Serial.print(cmd[5]);
+//  Serial.print(" ");
+//  Serial.print(cmd[6]);
+//  Serial.print(" ");
+//  Serial.println(cmd[7]);
 
 
       // if no CRC header error
       if ((cmd[7] & 0b1000000) == 0) {
+
+        // critical - set foreground rx processing
+        _db_rxcnt++;
 
 
 #if 0  // todo - check CRC Error
@@ -2561,6 +2864,12 @@ void ISR_VECT lr11xx::handleDio0Rise()
 
 
 /////////////////// -- need this for size
+// debug rx
+  //available(&packetLength, NULL);
+
+  //_db_pktLen = packetLength;
+  //_db_rxcnt++;
+
 #if 0
         uint8_t cmd2[8] = {2,3,0x2,0x3};
 
@@ -2568,24 +2877,24 @@ void ISR_VECT lr11xx::handleDio0Rise()
 //        int packetLength = cmd2[6];
         packetLength = cmd2[5];
 
-        Serial.print("stat1.1 ");
-        Serial.print(cmd2[2]);
-        Serial.print(" stat2 ");
-        Serial.print(cmd2[3]);
-        Serial.print(" stat1.2 ");
-        Serial.print(cmd2[4]);
-        Serial.print(" pack len= ");
+//        Serial.print("stat1.1 ");
+//        Serial.print(cmd2[2]);
+//        Serial.print(" stat2 ");
+//        Serial.print(cmd2[3]);
+//        Serial.print(" stat1.2 ");
+//        Serial.print(cmd2[4]);
+        Serial.print("rx in len= ");
         Serial.print(packetLength);
         Serial.print(" start= ");
         Serial.println(cmd2[6]);
 
-        #if 0
-        packetLength = dumpRx();
-        #else
-        dumpRx();
-        packetLength = 0;    // TODO = =TEST TEST
-        #endif
-        dumpRx();
+//        #if 0
+//        packetLength = dumpRx();
+//        #else
+//        dumpRx();
+//        packetLength = 0;    // TODO = =TEST TEST
+//        #endif
+//        dumpRx();
 #endif
 
 
@@ -2608,6 +2917,8 @@ void ISR_VECT lr11xx::handleDio0Rise()
         Serial.println("<");
 #endif
 
+// debug rx
+#if 0
         // LoRa GetStats
         uint8_t cmd9[15] = {2,9,0x2,0x1};
         cmdTransfer("->getStats", cmd9);
@@ -2619,29 +2930,58 @@ void ISR_VECT lr11xx::handleDio0Rise()
         Serial.print(" hdr ");
         Serial.print( (cmd9[9] << 8) | cmd[10] );
         Serial.print(" fls sync ");
-        Serial.println( (cmd9[11] << 8) | cmd[12] );
+        Serial.print( (cmd9[11] << 8) | cmd[12] );
+        Serial.print(" st ");
+        Serial.print( cmd9[2] );
+        Serial.print(" ");
+        Serial.print( cmd9[3] );
+        Serial.print(" ");
+        Serial.print( cmd9[4] );
+#endif
 
-
+#if 0
         if (_onReceive && packetLength) {
-          Serial.println("call onRec");
+          //Serial.println("call onRec");
           //delay(50);
             _onReceive(packetLength);
-          Serial.println("call onRec");
+//          Serial.println("call onRec");
 
 //        Serial.print("pack len= ");
 //        Serial.println(packetLength);
         } else {
-          Serial.println("RXDone - missing handler or 0 packet len");
+          #if 0
+          if (_onReceive)
+//            Serial.println("RXDone - missing handler or 0 packet len");
+            Serial.println("RXDone - 0 packet len");
+          else
+            Serial.println("RXDone - missing handler");
+          #endif
         }
+#endif
 
+
+// todotodo
+#if 0
         if (!packetLength) {
+            modulationDirty=1;
+            setModulationParams(_sf, _bw, _cr, _ldro);
+
+            // tell radio payload length
+           // _payloadLength = size;
+            packetParamsDirty=1;
+            setPacketParams(0xffff, _implicitHeaderMode, 0 /*_payloadLength */, _crcMode);
+//            setPacketParams(0xffff, _implicitHeaderMode, 200 /*_payloadLength */, _crcMode);
+
             // continuous mode
             // Rx mode, no timeout  (setRX)
-            uint8_t cmd[8] = {5,0,0x2,0x9,0xff,0xff,0xff};
+            //uint8_t cmd[8] = {5,0,0x2,0x9,0xff,0xff,0xff};
+            
+            uint8_t cmd[8] = {5,0,0x2,0x9,0x00,0x00,0x00};
 
             cmdTransfer("->rx", cmd);
             Serial.println("Restart RX");
         }
+#endif
 
   #if 0
     }
@@ -2674,15 +3014,24 @@ void ISR_VECT lr11xx::handleDio0Rise()
     {
       cmdTransfer("->clear irqs", clr, 0);
       #if 0
-      Serial.print("handleDio  --------------- clr ");
+      Serial.print("handleDio- clr ");
+      #if 1
       Serial.print(clr[2]);
       Serial.print(" ");
       Serial.print(clr[3]);
       Serial.print(" - ");
+      Serial.print(clr[4]);
+      Serial.print(" ");
+      Serial.print(clr[5]);
+      Serial.print(" ");
       Serial.print(clr[6]);
       Serial.print(" ");
+      #endif
       Serial.println(clr[7]);
       #endif
+
+      available(NULL, NULL);
+
     }
 
     // else {
@@ -2698,5 +3047,53 @@ void ISR_VECT lr11xx::onDio0Rise()
 }
 
 lr11xx lr11xx_modem;
+
+uint8_t track_rx = 0;
+
+void lr11xx::foreground(void)
+{
+  //unsigned long time = millis();
+
+  if (_db_rxcnt) {
+    //unsigned long time = millis();
+    Serial.println("foreground: ");
+  // debug rx  XXX
+    // only one chance to read buffer info
+    //
+    track_rx++;
+    #if 0
+    uint8_t sz = dumpRx();
+    if (sz) {
+      Serial.print(" dmprx ");
+      Serial.print( sz );
+      Serial.print(" trk ");
+      Serial.println( track_rx );
+track_rx=0;
+    #endif
+
+
+    uint8_t packetLength = 0;
+    available(&packetLength, NULL);
+    Serial.print(" intLen: ");
+    Serial.print(  _db_pktLen);
+    Serial.print(" rxcnt ");
+    Serial.print(_db_rxcnt);
+    Serial.print(" avail ");
+    Serial.println(packetLength);
+    _db_rxcnt=0;
+    if (_onReceive && packetLength) {
+      //Serial.println("call onRec");
+      //delay(50);
+      _onReceive(packetLength);
+    }
+
+
+//    }
+
+
+  }
+
+};
+
 
 #endif

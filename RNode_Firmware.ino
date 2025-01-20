@@ -70,11 +70,29 @@ void setup() {
   fifo_init(&serialFIFO, serialBuffer, CONFIG_UART_BUFFER_SIZE);
 
   Serial.begin(serial_baudrate);
-  while (!Serial);
+
+  #if HAS_NP
+    led_init();
+  #endif
+
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_RNODE_NG_22 && BOARD_MODEL != BOARD_TBEAM_S_V1 && BOARD_MODEL != BOARD_WIO_T1000E
+  // Some boards need to wait until the hardware UART is set up before booting
+  // the full firmware. In the case of the RAK4631, the line below will wait
+  // until a serial connection is actually established with a master. Thus, it
+  // is disabled on this platform.
+    while (!Serial);
+  #else
+  // Wait a little to improve debug output capture
+    delay(2000);
+  #endif
 
   serial_interrupt_init();
 
   // Configure input and output pins
+  #if HAS_INPUT
+    input_init();
+  #endif
+
   #if HAS_NP == false
     pinMode(pin_led_rx, OUTPUT);
     pinMode(pin_led_tx, OUTPUT);
@@ -334,7 +352,7 @@ void ISR_VECT receive_callback(int packet_size) {
 bool startRadio() {
   update_radio_lock();
       // ble debug
-  Serial.print("do radio ");
+  //Serial.print("do radio ");
   if (!radio_online && !console_active) {
       // ble debug
     Serial.print(" not-online lockd: ");
@@ -392,7 +410,7 @@ bool startRadio() {
       kiss_indicate_radiostate();
       led_indicate_warning(3);
       // ble debug
-      //Serial.println(" locked-nostart!");
+      Serial.println(" locked-nostart!");
       return false;
     }
   } else {
@@ -412,14 +430,14 @@ void stopRadio() {
 
 void update_radio_lock() {
       // ble debug
-    static char lock[40];
+    //static char lock[40];
   if (lora_freq != 0 && lora_bw != 0 && lora_txp != 0xFF && lora_sf != 0) {
     radio_locked = false;
   } else {
     radio_locked = true;
   }
-    sprintf(lock, "lock chk %d %d %x %d lockd: %d", lora_freq, lora_bw, lora_txp, lora_sf,  radio_locked ? 1 : 0);
-    Serial.println(lock);
+    //sprintf(lock, "lock chk %d %d %x %d lockd: %d", lora_freq, lora_bw, lora_txp, lora_sf,  radio_locked ? 1 : 0);
+    //Serial.println(lock);
 }
 
 bool queueFull() {
@@ -562,6 +580,7 @@ void transmit(uint16_t size) {
         written++;
       }
       LoRa->endPacket(); add_airtime(written);
+      Serial.println("endPacket");
     }
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
@@ -735,11 +754,11 @@ void serialCallback(uint8_t sbyte) {
         kiss_indicate_radiostate();
       } else if (sbyte == 0x01) {
       // ble debug
-        Serial.println("start radio...");
+        //Serial.println("start radio...");
         startRadio();
         kiss_indicate_radiostate();
       // ble debug
-        Serial.println("start radio end");
+        //Serial.println("start radio end");
       }
     } else if (command == CMD_ST_ALOCK) {
       if (sbyte == FESC) {
@@ -1061,12 +1080,20 @@ void updateModemStatus() {
   }
 
   if (dcd_led) {
+    #if BOARD_MODEL == BOARD_WIO_T1000E
+    // todo
+    #else
     led_rx_on();
+    #endif
   } else {
     if (airtime_lock) {
       led_indicate_airtime_lock();
     } else {
+      #if BOARD_MODEL == BOARD_WIO_T1000E
+      // todo
+      #else
       led_rx_off();
+      #endif
     }
   }
 }
@@ -1284,6 +1311,11 @@ void validate_status() {
 }
 #endif
 
+int led_flash_state = 0;
+#define MORSE_WPM 10
+int led_dit_ms = 1000 * 60 /(50*MORSE_WPM);
+unsigned long last_time;
+
 void loop() {
   if (radio_online) {
     #if MCU_VARIANT == MCU_ESP32
@@ -1401,6 +1433,248 @@ void loop() {
           stopRadio();
           bt_state = BT_STATE_ON;
     }
+  #endif
+
+  #if HAS_INPUT
+    input_read();
+  #endif
+
+  // Foreground processing loop for modem
+  #if BOARD_MODEL == BOARD_WIO_T1000E
+  LoRa->foreground();
+  #endif
+
+  // Indicate status
+  #if BOARD_MODEL == BOARD_WIO_T1000E
+    // display R in morse while running  ._.
+    unsigned long time = millis();
+    switch (led_flash_state) {
+      case 0:
+        led_rx_on();
+        led_flash_state += 1;
+        last_time = time;
+        break;
+      case 1:
+        if (time-last_time > led_dit_ms) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 2:
+        if (time-last_time > led_dit_ms) {
+          led_rx_on();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 3:
+        // char apacing 3 dits
+        if (time-last_time > led_dit_ms*3) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 4:
+        if (time-last_time > led_dit_ms) {
+          led_rx_on();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 5:
+        if (time-last_time > led_dit_ms) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      // idle between letters
+      case 6:
+        //Serial.println(bt_state);
+        if (bt_state == BT_STATE_BLE_CONNECTED || bt_state == BT_STATE_CONNECTED) {
+          if (time-last_time > led_dit_ms*7) {
+            led_rx_on();
+            led_flash_state += 1;
+            last_time = time;
+          }
+        }
+        else {
+          if (time-last_time > 4*1000) {
+          //led_rx_off();
+            led_flash_state = 0;
+          }
+          //last_time = time;
+        }
+        break;
+      // start B for bluetooth connected  _...
+      case 7:
+        if (time-last_time > led_dit_ms*3) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 8:
+        if (time-last_time > led_dit_ms) {
+          led_rx_on();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 9:
+        if (time-last_time > led_dit_ms) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 10:
+        if (time-last_time > led_dit_ms) {
+          led_rx_on();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 11:
+        if (time-last_time > led_dit_ms) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 12:
+        if (time-last_time > led_dit_ms) {
+          led_rx_on();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      case 13:
+        if (time-last_time > led_dit_ms) {
+          led_rx_off();
+          led_flash_state += 1;
+          last_time = time;
+        }
+        break;
+      // idle between letters
+      case 14:
+        if (time-last_time > 4*1000) {
+          //led_rx_off();
+          led_flash_state = 0;
+        }
+        break;
+
+    }
+  #endif
+
+
+}
+
+
+void sleep_now() {
+  #if HAS_SLEEP == true
+    #if BOARD_MODEL == BOARD_RNODE_NG_22
+      display_intensity = 0;
+      update_display(true);
+    #endif
+    #if PIN_DISP_SLEEP >= 0
+      pinMode(PIN_DISP_SLEEP, OUTPUT);
+      digitalWrite(PIN_DISP_SLEEP, DISP_SLEEP_LEVEL);
+    #endif
+    #if HAS_BLUETOOTH
+      if (bt_state == BT_STATE_CONNECTED) {
+        bt_stop();
+        delay(100);
+      }
+    #endif
+    #if BOARD_MODEL == BOARD_WIO_T1000E
+
+        pinMode(pin_3v3_en_sensor, INPUT);
+        ////digitalWrite(pin_3v3_en_sensor, LOW);
+
+        led_rx_off();
+
+        // setup for button wakeup
+        // button press HIGH on T1000E
+        //nrf_gpio_cfg_sense_input(PIN_BUTTON,    NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+        //nrf_gpio_cfg_sense_input(PIN_BUTTON,    NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_LOW);
+        // Off works, on works when usb programming attached
+        nrf_gpio_cfg_sense_input(PIN_BUTTON,    NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
+
+        //nrf_gpio_cfg_sense_input(PIN_BUTTON,    NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+
+        // test t1000-e sleep
+        // https://github.com/lyusupov/SoftRF/blob/81c519ca75693b696752235d559e881f2e0511ee/software/firmware/source/SoftRF/src/platform/nRF52.cpp#L1738
+        constexpr uint32_t DFU_MAGIC_SKIP = 0x6d;
+        sd_power_gpregret_set(0, DFU_MAGIC_SKIP); // Equivalent NRF_POWER->GPREGRET = DFU_MAGIC_SKIP
+        // https://devzone.nordicsemi.com/f/nordic-q-a/48919/ram-retention-settings-with-softdevice-enabled
+        auto ok = sd_power_system_off();
+        if (ok != NRF_SUCCESS) {
+            //LOG_ERROR("FIXME: Ignoring soft device (EasyDMA pending?) and forcing system-off!");
+            NRF_POWER->SYSTEMOFF = 1;
+        }
+    #else
+      esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
+      esp_deep_sleep_start();
+    #endif
+  #endif
+}
+
+
+void button_event(uint8_t event, unsigned long duration) {
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+//    if (display_blanked) {
+//      display_unblank();
+//    } else {
+      if (duration > 10000) {
+        #if HAS_CONSOLE
+          #if HAS_BLUETOOTH || HAS_BLE
+            bt_stop();
+          #endif
+          console_active = true;
+          console_start();
+        #endif
+        Serial.println("Press console");
+      } else if (duration > 5000) {
+        #if HAS_BLUETOOTH || HAS_BLE
+//          if (bt_state != BT_STATE_CONNECTED) { bt_enable_pairing(); }
+        #endif
+        Serial.println("Press BT pair");
+        //led_rx_off();
+
+      } else if (duration > 700) {
+        #if HAS_SLEEP
+          sleep_now();
+        #endif
+
+        //led_rx_on();
+        pinMode(pin_buzzer_en, OUTPUT);
+        //pinMode(pin_buzzer_en, INPUT);
+        //digitalWrite(pin_buzzer_en, LOW);
+        digitalWrite(pin_buzzer_en, HIGH);
+        //pinMode(pin_buzzer, OUTPUT);
+        //pinMode(pin_buzzer, INPUT);
+        tone(pin_buzzer, 500, 500);
+        //analogWrite(pin_buzzer, 100);
+        Serial.println("Press sleep");
+      } else {
+        Serial.println("Press BT toggle");
+        #if HAS_BLUETOOTH || HAS_BLE
+        if (bt_state != BT_STATE_CONNECTED) {
+          if (bt_state == BT_STATE_OFF) {
+//            bt_start();
+//            bt_conf_save(true);
+          } else {
+//            bt_stop();
+//            bt_conf_save(false);
+          }
+        }
+        #endif
+      }
+      //Serial.println("Button detected!");
+//    }
   #endif
 }
 
