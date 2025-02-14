@@ -229,9 +229,13 @@ inline void kiss_write_packet() {
 }
 
 inline void getPacketData(uint16_t len) {
+  Serial.print("gp ");
   while (len-- && read_len < MTU) {
     pbuf[read_len++] = LoRa->read();
+    Serial.print(pbuf[read_len-1]);
+    Serial.print(",");
   }
+  Serial.println(" <");
 }
 
 void ISR_VECT receive_callback(int packet_size) {
@@ -244,6 +248,9 @@ void ISR_VECT receive_callback(int packet_size) {
     uint8_t header   = LoRa->read(); packet_size--;
     uint8_t sequence = packetSequence(header);
     bool    ready    = false;
+
+    Serial.print("gp hdr ");
+    Serial.println(header);
 
     if (isSplitPacket(header) && seq == SEQ_UNSET) {
       // This is the first part of a split
@@ -537,11 +544,16 @@ void transmit(uint16_t size) {
         header = header | FLAG_SPLIT;
       }
 
+      Serial.print("ls ");
       LoRa->beginPacket();
       LoRa->write(header); written++;
+      Serial.print(header);
+      Serial.print(",");
 
       for (uint16_t i=0; i < size; i++) {
         LoRa->write(tbuf[i]);
+        Serial.print(tbuf[i]);
+        Serial.print(",");
 
         written++;
 
@@ -552,6 +564,7 @@ void transmit(uint16_t size) {
           written = 1;
         }
       }
+      Serial.println(" <");
 
       LoRa->endPacket(); add_airtime(written);
     } else {

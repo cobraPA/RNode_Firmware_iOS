@@ -81,7 +81,7 @@ public:
 
   void rxAntEnable();
   void loraMode();
-  void waitOnBusy();
+  void waitOnBusy(uint8_t doYield = 1);
   void executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size);
   void executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size);
   void writeBuffer(const uint8_t* buffer, size_t size);
@@ -125,6 +125,9 @@ void doSetup(void);
 void dioStatInternal(uint8_t *stat1, uint8_t *int2, uint8_t *int3, uint8_t *int4);
 void dioStat(uint8_t *stat1, uint8_t *int2, uint8_t *int3, uint8_t *int4);
 uint8_t dumpRx(void);
+void handleIntStatus(void);
+void checkOpState(void);
+void intReadyTxRx(void);
 
   static void onDio0Rise();
 
@@ -149,6 +152,8 @@ private:
   uint8_t _cr;
   uint8_t _ldro;
   int _packetIndex;
+  int _packetIndexRX;
+  int _local_rx_buffer;
   int _preambleLength;
   int _implicitHeaderMode;
   int _payloadLength;
@@ -156,6 +161,7 @@ private:
   int _fifo_tx_addr_ptr;
   int _fifo_rx_addr_ptr;
   uint8_t _packet[255];
+  uint8_t _packetRX[255];
   bool _preinit_done;
   void (*_onReceive)(int);
   int modulationDirty;
