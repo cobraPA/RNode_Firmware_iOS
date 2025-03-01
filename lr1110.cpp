@@ -2495,9 +2495,10 @@ void lr11xx::receive(int size)
     // continuous mode
     // Rx mode, no timeout  (setRX)
     // stay until command/continuous mode
-    //uint8_t cmd[8] = {5,0,0x2,0x9,0xff,0xff,0xff};
+    // RNode uses continuous reception mode
+    uint8_t cmd[8] = {5,0,0x2,0x9,0xff,0xff,0xff};
     // go to standby after packet reception
-    uint8_t cmd[8] = {5,0,0x2,0x9,0x00,0x00,0x00};
+    //uint8_t cmd[8] = {5,0,0x2,0x9,0x00,0x00,0x00};
 
     cmdTransfer("->rx", cmd, 0);
     debug_print_enabled=0;
