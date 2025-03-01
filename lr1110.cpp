@@ -322,7 +322,8 @@ cmdTransfer("dio sw cfg", cmd5);
 // 1.6V, longer delay
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x3, 0xf2};
 // shorter 5000uS (RadioLib default) 0xa4  (5000 / 30.52)
-uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x0, 0xa4};
+// 1.8V, shorter delay
+uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
 #else // BOARD_WIO_T1000E 
 // tune = 0 , 1.6V tracker t1000-e
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x3, 0xd7};

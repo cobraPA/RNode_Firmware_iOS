@@ -75,7 +75,7 @@ void setup() {
     led_init();
   #endif
 
-  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_RNODE_NG_22 && BOARD_MODEL != BOARD_TBEAM_S_V1 && BOARD_MODEL != BOARD_WIO_T1000E
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_RNODE_NG_22 && BOARD_MODEL != BOARD_TBEAM_S_V1 && BOARD_MODEL != BOARD_WIO_T1000E &&BOARD_MODEL != BOARD_WIO_TRACK_1110
   // Some boards need to wait until the hardware UART is set up before booting
   // the full firmware. In the case of the RAK4631, the line below will wait
   // until a serial connection is actually established with a master. Thus, it
@@ -1455,12 +1455,12 @@ void loop() {
   #endif
 
   // Foreground processing loop for modem
-  #if BOARD_MODEL == BOARD_WIO_T1000E
+  #if BOARD_MODEL == BOARD_WIO_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110
   LoRa->foreground();
   #endif
 
   // Indicate status
-  #if BOARD_MODEL == BOARD_WIO_T1000E
+  #if BOARD_MODEL == BOARD_WIO_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110
     // display R in morse while running  ._.
     unsigned long time = millis();
     switch (led_flash_state) {
