@@ -1357,8 +1357,6 @@ void loop() {
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
         kiss_write_packet();
-        Serial.println("kiss pkt");
-        //dododo
       }
 
       airtime_lock = false;
@@ -1381,14 +1379,10 @@ void loop() {
               if (!dcd) {
                 uint8_t csma_r = (uint8_t)random(256);
                 if (csma_p >= csma_r) {
-                  Serial.println("fQ 1");
-                  //dododo
                   flushQueue();
                 } else {
                   dcd_waiting = true;
                   dcd_wait_until = millis()+csma_slot_ms;
-                  Serial.println("fQ 1 w");
-                  //dododo
                 }
               }
             }
@@ -1610,10 +1604,12 @@ void sleep_now() {
         delay(100);
       }
     #endif
-    #if BOARD_MODEL == BOARD_WIO_T1000E
+    #if BOARD_MODEL == BOARD_WIO_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110
 
-        pinMode(pin_3v3_en_sensor, INPUT);
-        ////digitalWrite(pin_3v3_en_sensor, LOW);
+        #if BOARD_MODEL == BOARD_WIO_T1000E
+          pinMode(pin_3v3_en_sensor, INPUT);
+          ////digitalWrite(pin_3v3_en_sensor, LOW);
+        #endif
 
         led_rx_off();
 
@@ -1671,14 +1667,16 @@ void button_event(uint8_t event, unsigned long duration) {
         #endif
 
         //led_rx_on();
-        pinMode(pin_buzzer_en, OUTPUT);
-        //pinMode(pin_buzzer_en, INPUT);
-        //digitalWrite(pin_buzzer_en, LOW);
-        digitalWrite(pin_buzzer_en, HIGH);
-        //pinMode(pin_buzzer, OUTPUT);
-        //pinMode(pin_buzzer, INPUT);
-        tone(pin_buzzer, 500, 500);
-        //analogWrite(pin_buzzer, 100);
+        #if BOARD_MODEL == BOARD_WIO_T1000E
+          pinMode(pin_buzzer_en, OUTPUT);
+          //pinMode(pin_buzzer_en, INPUT);
+          //digitalWrite(pin_buzzer_en, LOW);
+          digitalWrite(pin_buzzer_en, HIGH);
+          //pinMode(pin_buzzer, OUTPUT);
+          //pinMode(pin_buzzer, INPUT);
+          tone(pin_buzzer, 500, 500);
+          //analogWrite(pin_buzzer, 100);
+        #endif
         Serial.println("Press sleep");
       } else {
         Serial.println("Press BT toggle");

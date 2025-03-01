@@ -53,8 +53,8 @@
   //#define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
   //#define BOARD_MODEL  BOARD_LORA32_V2_0
 
-  //#define BOARD_MODEL  BOARD_WIO_TRACK_1110
-  #define BOARD_MODEL  BOARD_WIO_T1000E
+  #define BOARD_MODEL  BOARD_WIO_TRACK_1110
+  //#define BOARD_MODEL  BOARD_WIO_T1000E
   // -----------------------------------
 
 
@@ -521,10 +521,15 @@
       #define EEPROM_SIZE 1024
       #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 
-      // following pins are for the LR1110 (comp ? sx1262)
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+
+      // following pins are for the LR1110
       // LR1110 controls rxen, todo
 
       const int pin_rxen = -1;  //N/A
+
+      const int pin_btn_usr1 = 32+2;  //P1.02
 
   //Arduino15\packages\Seeeduino\hardware\nrf52\1.1.8\libraries\LBM_WM1110\src\internal\Wm1110Hardware.hpp
   // IRQ shows as PIN_LR1110_IRQ
@@ -570,7 +575,7 @@
       #define HAS_INPUT true
       #define HAS_SLEEP true
 
-      // following pins are for the LR1110 (comp ? sx1262)
+      // following pins are for the LR1110 
       // LR1110 controls rxen, no nrf52 pin
       const int pin_rxen = -1;  //N/A
 

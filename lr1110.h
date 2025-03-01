@@ -127,7 +127,6 @@ void dioStat(uint8_t *stat1, uint8_t *int2, uint8_t *int3, uint8_t *int4);
 uint8_t dumpRx(void);
 void handleIntStatus(void);
 void checkOpState(void);
-void intReadyTxRx(void);
 void checkTXstat(void);
 void print_state(void);
 
