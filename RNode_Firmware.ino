@@ -229,13 +229,13 @@ inline void kiss_write_packet() {
 }
 
 inline void getPacketData(uint16_t len) {
-  Serial.print("gp ");
+//  Serial.print("gp ");
   while (len-- && read_len < MTU) {
     pbuf[read_len++] = LoRa->read();
-    Serial.print(pbuf[read_len-1]);
-    Serial.print(",");
+//    Serial.print(pbuf[read_len-1]);
+//    Serial.print(",");
   }
-  Serial.println(" <");
+//  Serial.println(" <");
 }
 
 void ISR_VECT receive_callback(int packet_size) {
@@ -249,8 +249,8 @@ void ISR_VECT receive_callback(int packet_size) {
     uint8_t sequence = packetSequence(header);
     bool    ready    = false;
 
-    Serial.print("gp hdr ");
-    Serial.println(header);
+//    Serial.print("gp hdr ");
+//    Serial.println(header);
 
     if (isSplitPacket(header) && seq == SEQ_UNSET) {
       // This is the first part of a split
@@ -459,6 +459,7 @@ void flushQueue(void) {
     led_tx_on();
     uint16_t processed = 0;
 
+    Serial.println("m setTX");
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     while (!fifo16_isempty(&packet_starts)) {
     #else
@@ -479,6 +480,7 @@ void flushQueue(void) {
       }
     }
 
+    Serial.println("m setRX");
     lora_receive();
     led_tx_off();
     post_tx_yield_timeout = millis()+(lora_post_tx_yield_slots*csma_slot_ms);
@@ -544,16 +546,16 @@ void transmit(uint16_t size) {
         header = header | FLAG_SPLIT;
       }
 
-      Serial.print("ls ");
+//      Serial.print("ls ");
       LoRa->beginPacket();
       LoRa->write(header); written++;
-      Serial.print(header);
-      Serial.print(",");
+//      Serial.print(header);
+//      Serial.print(",");
 
       for (uint16_t i=0; i < size; i++) {
         LoRa->write(tbuf[i]);
-        Serial.print(tbuf[i]);
-        Serial.print(",");
+//        Serial.print(tbuf[i]);
+//        Serial.print(",");
 
         written++;
 
@@ -564,7 +566,7 @@ void transmit(uint16_t size) {
           written = 1;
         }
       }
-      Serial.println(" <");
+//      Serial.println(" <");
 
       LoRa->endPacket(); add_airtime(written);
     } else {
@@ -593,7 +595,7 @@ void transmit(uint16_t size) {
         written++;
       }
       LoRa->endPacket(); add_airtime(written);
-      Serial.println("endPacket");
+//      Serial.println("endPacket");
     }
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
@@ -1355,6 +1357,8 @@ void loop() {
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
         kiss_write_packet();
+        Serial.println("kiss pkt");
+        //dododo
       }
 
       airtime_lock = false;
@@ -1377,10 +1381,14 @@ void loop() {
               if (!dcd) {
                 uint8_t csma_r = (uint8_t)random(256);
                 if (csma_p >= csma_r) {
+                  Serial.println("fQ 1");
+                  //dododo
                   flushQueue();
                 } else {
                   dcd_waiting = true;
                   dcd_wait_until = millis()+csma_slot_ms;
+                  Serial.println("fQ 1 w");
+                  //dododo
                 }
               }
             }

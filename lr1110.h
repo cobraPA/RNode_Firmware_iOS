@@ -128,6 +128,9 @@ uint8_t dumpRx(void);
 void handleIntStatus(void);
 void checkOpState(void);
 void intReadyTxRx(void);
+void checkTXstat(void);
+void print_state(void);
+
 
   static void onDio0Rise();
 
