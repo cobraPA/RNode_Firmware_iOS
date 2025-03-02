@@ -41,9 +41,12 @@
   void button_event(uint8_t event, unsigned long duration);
 
   void input_init() {
-    //pinMode(PIN_BUTTON, INPUT_PULLUP);
-    // Pullup not needed on T1000E
-    pinMode(PIN_BUTTON, INPUT);
+    #if BOARD_MODEL == BOARD_WIO_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110
+      // Pullup not needed on T1000E
+      pinMode(PIN_BUTTON, INPUT);
+    #else
+      pinMode(PIN_BUTTON, INPUT_PULLUP);
+    #endif
   }
 
   void input_get_all_events() {
@@ -56,9 +59,10 @@
 
   void input_read() {
     int button_reading = digitalRead(PIN_BUTTON);
-    // Invert
-    button_reading = !button_reading;
-    //Serial.println(button_reading);
+    #if BOARD_MODEL == BOARD_WIO_T1000E
+      // Invert
+      button_reading = !button_reading;
+    #endif
     if (button_reading != debounce_state) {
       button_debounce_last = millis();
       debounce_state = button_reading;

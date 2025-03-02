@@ -254,10 +254,10 @@ uint8_t boot_vector = 0x00;
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
     #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
-		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
-		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
-		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
-		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+		void led_tx_on()  { }
+		void led_tx_off() { }
     #elif BOARD_MODEL == BOARD_WIO_T1000E
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }

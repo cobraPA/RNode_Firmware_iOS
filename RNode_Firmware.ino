@@ -459,7 +459,6 @@ void flushQueue(void) {
     led_tx_on();
     uint16_t processed = 0;
 
-    Serial.println("m setTX");
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     while (!fifo16_isempty(&packet_starts)) {
     #else
@@ -480,7 +479,6 @@ void flushQueue(void) {
       }
     }
 
-    Serial.println("m setRX");
     lora_receive();
     led_tx_off();
     post_tx_yield_timeout = millis()+(lora_post_tx_yield_slots*csma_slot_ms);

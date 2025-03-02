@@ -1712,12 +1712,14 @@ int ISR_VECT lr11xx::available(uint8_t *size, uint8_t *rxbufstart)
 
     }
   
-
     if(rxbufstart) *rxbufstart = cmd[6];
-    if (rxbufstart && *rxbufstart) {
-      Serial.print("avail rxbufst>> ");
-      Serial.println(*rxbufstart);
-    }
+    #if 0
+      // rx buf size debug
+      if (rxbufstart && *rxbufstart) {
+        Serial.print("avail rxbufst>> ");
+        Serial.println(*rxbufstart);
+      }
+    #endif
  
 #if 0
     Serial.print("rx buf ");
