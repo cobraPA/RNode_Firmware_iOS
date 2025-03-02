@@ -44,8 +44,8 @@
   #define BOARD_RNODE_NG_22   0x42
   #define BOARD_GENERIC_NRF52 0x50
   #define BOARD_RAK4630       0x51
-  #define BOARD_WIO_TRACK_1110 0x52
-  #define BOARD_WIO_T1000E    0x53
+  #define BOARD_WIO_TRACK_1110_DEV 0x52
+  #define BOARD_SENSECAP_TRACKER_T1000E    0x53
 
   // -----------------------------------
   // override for local compile
@@ -53,8 +53,8 @@
   //#define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
   //#define BOARD_MODEL  BOARD_LORA32_V2_0
 
-  #define BOARD_MODEL  BOARD_WIO_TRACK_1110
-  //#define BOARD_MODEL  BOARD_WIO_T1000E
+  //#define BOARD_MODEL  BOARD_WIO_TRACK_1110_DEV
+  #define BOARD_MODEL  BOARD_SENSECAP_TRACKER_T1000E
   // -----------------------------------
 
 
@@ -80,7 +80,7 @@
       #define MODEM SX1262
     #elif BOARD_MODEL == BOARD_GENERIC_NRF52
       #define MODEM SX1262
-    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110 || BOARD_MODEL == BOARD_WIO_T1000E
+    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV || BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
       #define MODEM LR1110
     #else
       #define MODEM SX1276
@@ -499,7 +499,7 @@
       const int pin_led_tx = LED_GREEN;
       const int pin_tcxo_enable = -1;
 
-    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
+    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
       //#define HAS_EEPROM true
       #define HAS_EEPROM false
       #define HAS_DISPLAY false
@@ -550,7 +550,7 @@
 
       const int pin_tcxo_enable = -1;
 
-    #elif BOARD_MODEL == BOARD_WIO_T1000E
+    #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
       //#define HAS_EEPROM true
       #define HAS_EEPROM false
       #define HAS_DISPLAY false

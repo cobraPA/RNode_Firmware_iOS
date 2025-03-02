@@ -314,7 +314,7 @@ cmdTransfer("dio sw cfg", cmd5);
 
 ///// XXXXXXXX DISABLED
 
-#if defined(BOARD_WIO_TRACK_1110)
+#if defined(BOARD_WIO_TRACK_1110_DEV)
 // set tcxo mode
 // tune = 2, 1.8V - wio tracker dev
 // time 983 = 0x3d7
@@ -324,7 +324,7 @@ cmdTransfer("dio sw cfg", cmd5);
 // shorter 5000uS (RadioLib default) 0xa4  (5000 / 30.52)
 // 1.8V, shorter delay
 uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
-#else // BOARD_WIO_T1000E 
+#else // BOARD_SENSECAP_TRACKER_T1000E 
 // tune = 0 , 1.6V tracker t1000-e
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x3, 0xd7};
 // longer delay
@@ -390,7 +390,7 @@ void lr11xx::doSetup(void)
 // txco fails if this is done now
 
 
-#if defined(BOARD_WIO_TRACK_1110)
+#if defined(BOARD_WIO_TRACK_1110_DEV)
 // set tcxo mode
 // tune = 2, 1.8V - wio tracker dev
 // time 983 = 0x3d7
@@ -400,7 +400,7 @@ void lr11xx::doSetup(void)
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x0, 0xa4};
 // shorter 5000uS (RadioLib default) 0xa4  (5000 / 30.52)  - 1.8V
 uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
-#else // BOARD_WIO_T1000E 
+#else // BOARD_SENSECAP_TRACKER_T1000E 
 // tune = 0 , 1.6V tracker t1000-e
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x3, 0xd7};
 // test with 0xa4 delay
@@ -458,11 +458,11 @@ uint8_t RfSwEn = 0b01111;  // enable  DIO10 - DIO8 - DIO7 - DIO6 - DIO5
 // standby none
 
 // wio tracker dev
-#if defined(BOARD_WIO_TRACK_1110)
+#if defined(BOARD_WIO_TRACK_1110_DEV)
 uint8_t rx_enable = 0b1;  // switch 0
 uint8_t tx_enable = 0b11;  // switch 0 and 1
 uint8_t tx_hp_enable = 0b10;  // switch 1
-#else // BOARD_WIO_T1000E 
+#else // BOARD_SENSECAP_TRACKER_T1000E 
 uint8_t rx_enable = 0b1001; 
 uint8_t tx_enable = 0b1011;  
 uint8_t tx_hp_enable = 0b1010;  
@@ -519,7 +519,7 @@ cmdTransfer("setRegMode", cmd7);
 //cmdTransfer("LfClk", cmd8);
 
 #if 0
-#if defined(BOARD_WIO_TRACK_1110)
+#if defined(BOARD_WIO_TRACK_1110_DEV)
 // set tcxo mode
 // tune = 2, 1.8V - wio tracker dev
 // time 983 = 0x3d7
@@ -529,7 +529,7 @@ cmdTransfer("setRegMode", cmd7);
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x0, 0xa4};
 // shorter 5000uS (RadioLib default) 0xa4  (5000 / 30.52)  - 1.8V
 uint8_t cmd4[10] = {6,0,0x1,0x17,2, 0, 0x0, 0xa4};
-#else // BOARD_WIO_T1000E 
+#else // BOARD_SENSECAP_TRACKER_T1000E 
 // tune = 0 , 1.6V tracker t1000-e
 //uint8_t cmd4[10] = {6,0,0x1,0x17,0, 0, 0x3, 0xd7};
 // test with 0xa4 delay
@@ -1199,7 +1199,7 @@ void lr11xx::reset(void) {
     // setup pins
     // Not needed for current firmware,
     // but supports T1000-E sensor power
-    #if defined(BOARD_WIO_T1000E)
+    #if defined(BOARD_SENSECAP_TRACKER_T1000E)
       //pinMode(pin_3v3_en_sensor, OUTPUT);
       //digitalWrite(pin_3v3_en_sensor, HIGH);
     #endif

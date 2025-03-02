@@ -41,7 +41,7 @@
   void button_event(uint8_t event, unsigned long duration);
 
   void input_init() {
-    #if BOARD_MODEL == BOARD_WIO_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110
+    #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
       // Pullup not needed on T1000E
       pinMode(PIN_BUTTON, INPUT);
     #else
@@ -59,7 +59,7 @@
 
   void input_read() {
     int button_reading = digitalRead(PIN_BUTTON);
-    #if BOARD_MODEL == BOARD_WIO_T1000E
+    #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
       // Invert
       button_reading = !button_reading;
     #endif

@@ -253,12 +253,12 @@ uint8_t boot_vector = 0x00;
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
-    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
+    #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
 		void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
 		void led_tx_on()  { }
 		void led_tx_off() { }
-    #elif BOARD_MODEL == BOARD_WIO_T1000E
+    #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
@@ -295,7 +295,7 @@ void led_indicate_error(int cycles) {
 		}
 		npset(0,0,0);
 	#else
-    #if BOARD_MODEL == BOARD_WIO_T1000E
+    #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
     // todo
     #else
 
@@ -587,7 +587,7 @@ int8_t  led_standby_direction = 0;
 						led_rx_off();
 					#endif
 				#else
-          #if BOARD_MODEL == BOARD_WIO_T1000E
+          #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
           // todo
           #else
 					led_rx_off();
@@ -672,7 +672,7 @@ int8_t  led_standby_direction = 0;
 						led_rx_off();
 					#endif
 				#else
-          #if BOARD_MODEL == BOARD_WIO_T1000E
+          #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
           // todo
           #else
 					led_rx_off();
@@ -1406,9 +1406,9 @@ bool eeprom_model_valid() {
 	if (model == MODEL_C4 || model == MODEL_C9) {
     #elif BOARD_MODEL == BOARD_RAK4630
     if (model == MODEL_FF) {
-  #elif BOARD_MODEL == BOARD_WIO_TRACK_1110
+  #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
     if (model == MODEL_FF) {
-  #elif BOARD_MODEL == BOARD_WIO_T1000E
+  #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
     if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
