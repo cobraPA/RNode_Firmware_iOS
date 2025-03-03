@@ -115,7 +115,7 @@ void setup() {
     led_init();
   #endif
 
-  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114 && BOARD_MODEL != BOARD_TECHO && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114 && BOARD_MODEL != BOARD_TECHO && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1 && BOARD_MODEL != BOARD_SENSECAP_TRACKER_T1000E &&BOARD_MODEL != BOARD_WIO_TRACK_1110_DEV
     // Some boards need to wait until the hardware UART is set up before booting
     // the full firmware. In the case of the RAK4631 and Heltec T114, the line below will wait
     // until a serial connection is actually established with a master. Thus, it
@@ -160,7 +160,7 @@ void setup() {
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module
-  #if MODEM == SX1276 || MODEM == SX1278
+  #if MODEM == SX1276 || MODEM == SX1278 || MODEM == LR1110
   LoRa->setPins(pin_cs, pin_reset, pin_dio, pin_busy);
   #elif MODEM == SX1262
   LoRa->setPins(pin_cs, pin_reset, pin_dio, pin_busy, pin_rxen);
@@ -1596,6 +1596,11 @@ void loop() {
     input_read();
   #endif
 
+// Foreground processing loop for modem
+  #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
+    LoRa->foreground();
+  #endif
+
   if (memory_low) {
     #if PLATFORM == PLATFORM_ESP32
       if (esp_get_free_heap_size() < 8192) {
@@ -1640,10 +1645,26 @@ void sleep_now() {
         delay(2000);
         analogWrite(PIN_VEXT_EN, 0);
         delay(100);
+      #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
+          pinMode(pin_3v3_en_sensor, INPUT);
       #endif
-      sd_power_gpregret_set(0, 0x6d);
-      nrf_gpio_cfg_sense_input(pin_btn_usr1, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-      NRF_POWER->SYSTEMOFF = 1;
+      #if BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E || BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
+        led_rx_off();
+        // setup for button wakeup
+        nrf_gpio_cfg_sense_input(PIN_BUTTON,    NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
+        // https://github.com/lyusupov/SoftRF/blob/81c519ca75693b696752235d559e881f2e0511ee/software/firmware/source/SoftRF/src/platform/nRF52.cpp#L1738
+        constexpr uint32_t DFU_MAGIC_SKIP = 0x6d;
+        sd_power_gpregret_set(0, DFU_MAGIC_SKIP); // Equivalent NRF_POWER->GPREGRET = DFU_MAGIC_SKIP
+        // https://devzone.nordicsemi.com/f/nordic-q-a/48919/ram-retention-settings-with-softdevice-enabled
+        auto ok = sd_power_system_off();
+        if (ok != NRF_SUCCESS) {
+            //LOG_ERROR("FIXME: Ignoring soft device (EasyDMA pending?) and forcing system-off!");
+            NRF_POWER->SYSTEMOFF = 1;
+        }
+      #else
+        sd_power_gpregret_set(0, 0x6d);
+        nrf_gpio_cfg_sense_input(pin_btn_usr1, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+        NRF_POWER->SYSTEMOFF = 1;
     #endif
   #endif
 }

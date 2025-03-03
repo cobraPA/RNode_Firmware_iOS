@@ -37,6 +37,9 @@ sx127x *LoRa = &sx127x_modem;
 #elif MODEM == SX1280
 #include "sx128x.h"
 sx128x *LoRa = &sx128x_modem;
+#elif MODEM == LR1110
+#include "lr1110.h"
+lr11xx *LoRa = &lr11xx_modem;
 #endif
 
 #include "ROM.h"
@@ -330,7 +333,17 @@ uint8_t boot_vector = 0x00;
 		void led_tx_off() { digitalWrite(pin_led_tx, LED_OFF); }
 		void led_id_on()  { }
 		void led_id_off() { }
-	#endif
+  #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
+		void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+		void led_tx_on()  { }
+		void led_tx_off() { }
+  #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { }
+		void led_tx_off() { }
+  #endif
 #endif
 
 void hard_reset(void) {
@@ -1517,6 +1530,10 @@ bool eeprom_model_valid() {
     if (model == MODEL_C6 || model == MODEL_C7) {
     #elif BOARD_MODEL == BOARD_RAK4631
     if (model == MODEL_11 || model == MODEL_12) {
+  #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
+    if (model == MODEL_FF) {
+  #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
+    if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
