@@ -1665,6 +1665,7 @@ void sleep_now() {
         sd_power_gpregret_set(0, 0x6d);
         nrf_gpio_cfg_sense_input(pin_btn_usr1, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
         NRF_POWER->SYSTEMOFF = 1;
+      #endif
     #endif
   #endif
 }
