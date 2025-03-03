@@ -1537,14 +1537,16 @@ uint8_t lr11xx::modemStatus() {
     if(debug)
       Serial.println(".");
 
-    if(cmd[7]) {
-    Serial.print("modemstat cmd-7 ");
-    Serial.println(cmd[7]);
-    }
-    if(byte>0) {
-    Serial.print("modemstat ");
-    Serial.println(byte);
-    }
+    #if 0
+      if(cmd[7]) {
+      Serial.print("modemstat cmd-7 ");
+      Serial.println(cmd[7]);
+      }
+      if(byte>0) {
+      Serial.print("modemstat ");
+      Serial.println(byte);
+      }
+    #endif
 
 #endif
     return byte; 
@@ -1573,6 +1575,53 @@ uint8_t lr11xx::modemStatus() {
     return byte; 
 #endif
 }
+
+unsigned long preamble_detected_at = 0;
+extern long lora_preamble_time_ms;
+extern long lora_header_time_ms;
+bool false_preamble_detected = false;
+
+bool lr11xx::dcd() {
+  uint8_t clr[9] = {6,0,0x1,0x14,0, 0, 0, 0};
+  uint8_t stat1 = 0;
+  dioStat(0,0,0, &stat1);
+
+  //uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
+  uint32_t now = millis();
+
+  bool header_detected = false;
+  bool carrier_detected = false;
+
+//  if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) { header_detected = true; carrier_detected = true; }
+  if ((stat1 & 0b100000) != 0) { header_detected = true; carrier_detected = true; }
+  else { header_detected = false; }
+
+//  if ((buf[1] & IRQ_PREAMBLE_DET_MASK_6X) != 0) {
+  if ((stat1 & 0b10000) != 0) {
+    carrier_detected = true;
+    if (preamble_detected_at == 0) { preamble_detected_at = now; }
+    if (now - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
+      preamble_detected_at = 0;
+      if (!header_detected) { false_preamble_detected = true; }
+      //uint8_t clearbuf[2] = {0};
+      //clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X;
+      //executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
+
+      clr[7] = 0b10000;
+      cmdTransfer("->clrIrq", clr);
+    }
+  }
+
+  // TODO: Maybe there's a way of unlatching the RSSI
+  // status without re-activating receive mode?
+  // TODO - needed for LR1110?  It looks like Semtech
+  // defines base RSSI as only valid for the last packet
+  // so maybe that is correct.  THere is another RSSI 
+  // instantaneous for when you don't want last packet.
+  //if (false_preamble_detected) { sx126x_modem.receive(); false_preamble_detected = false; }
+  return carrier_detected;
+}
+
 
 // lr1110
 uint8_t lr11xx::currentRssiRaw() {
@@ -1959,7 +2008,8 @@ void lr11xx::sleep()
   // retention, no wakeup
   uint8_t cmd[10] = {7,0,0x1,0x1b,0x1, 0,0,0,0};
 
-  cmdTransfer("->sleep", cmd);
+  //cmdTransfer("->sleep", cmd);
+  // TODO
 }
 
 void lr11xx::enableTCXO() {

@@ -810,6 +810,8 @@
 
       #define HAS_INPUT true
       #define HAS_SLEEP true
+      #define BLE_MANUFACTURER "Seeed"
+      #define BLE_MODEL "WIO-1110"
 
       // following pins are for the LR1110
       // LR1110 controls rxen, todo
@@ -860,6 +862,8 @@
 
       #define HAS_INPUT true
       #define HAS_SLEEP true
+      #define BLE_MANUFACTURER "Seeed"
+      #define BLE_MODEL "T1000E"
 
       // following pins are for the LR1110 
       // LR1110 controls rxen, no nrf52 pin
