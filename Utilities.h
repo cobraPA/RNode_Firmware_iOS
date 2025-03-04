@@ -1247,9 +1247,12 @@ void setTXPower() {
 	if (radio_online) {
 		if (model == MODEL_11) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
 		if (model == MODEL_12) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+  
+		if (model == MODEL_25) LoRa->setTxPower(lora_txp, -1);
+		if (model == MODEL_27) LoRa->setTxPower(lora_txp, -1);
 
 		if (model == MODEL_C6) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-        if (model == MODEL_C7) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+    if (model == MODEL_C7) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
 
 		if (model == MODEL_A1) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_A2) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
@@ -1486,7 +1489,7 @@ bool eeprom_product_valid() {
 	#elif PLATFORM == PLATFORM_ESP32
 	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3 || rval == PRODUCT_TDECK_V1 || rval == PRODUCT_TBEAM_S_V1) {
 	#elif PLATFORM == PLATFORM_NRF52
-	if (rval == PRODUCT_RAK4631 || rval == PRODUCT_HELTEC_T114 || rval == PRODUCT_TECHO || rval == PRODUCT_HMBRW) {
+	if (rval == PRODUCT_RAK4631 || rval == PRODUCT_HELTEC_T114 || rval == PRODUCT_TECHO || rval == PRODUCT_SENSECAP_T1000E || rval == PRODUCT_WIO_1110 || rval == PRODUCT_HMBRW) {
 	#else
 	if (false) {
 	#endif
@@ -1535,9 +1538,9 @@ bool eeprom_model_valid() {
     #elif BOARD_MODEL == BOARD_RAK4631
     if (model == MODEL_11 || model == MODEL_12) {
   #elif BOARD_MODEL == BOARD_WIO_TRACK_1110_DEV
-    if (model == MODEL_FF) {
+    if (model == MODEL_27) {
   #elif BOARD_MODEL == BOARD_SENSECAP_TRACKER_T1000E
-    if (model == MODEL_FF) {
+    if (model == MODEL_25) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32

@@ -105,8 +105,12 @@
   #define MODEL_11            0x11 // RAK4631, 433 Mhz
   #define MODEL_12            0x12 // RAK4631, 868 Mhz
 
-  #define BOARD_WIO_TRACK_1110_DEV          0x52
+  #define PRODUCT_WIO_1110    0x26
+  #define BOARD_WIO_TRACK_1110_DEV    0x52
+  #define MODEL_27            0x27
+  #define PRODUCT_SENSECAP_T1000E     0x24
   #define BOARD_SENSECAP_TRACKER_T1000E     0x53
+  #define MODEL_25            0x25
 
   #define PRODUCT_HMBRW       0xF0
   #define BOARD_HMBRW         0x32

@@ -487,6 +487,7 @@ bool startRadio() {
         // The radio could not be started.
         // Indicate this failure over both the
         // serial port and with the onboard LEDs
+        Serial.println("Lora !begin");
         radio_error = true;
         kiss_indicate_error(ERROR_INITRADIO);
         led_indicate_error(0);
@@ -834,7 +835,7 @@ void serial_callback(uint8_t sbyte) {
         kiss_indicate_txpower();
       } else {
         int txp = sbyte;
-        #if MODEM == SX1262
+        #if MODEM == SX1262 || MODEM == LR1110
           if (txp > 22) txp = 22;
         #elif MODEM == SX1280
           #if HAS_PA
